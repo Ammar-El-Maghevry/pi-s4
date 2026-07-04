@@ -1,0 +1,24 @@
+# Base de données PostgreSQL avec l'extension pgvector préinstallée.
+# Démarrage : docker compose up -d
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: attendance_db
+    environment:
+      POSTGRES_USER: attendance
+      POSTGRES_PASSWORD: attendance
+      POSTGRES_DB: attendance
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Scripts exécutés au premier démarrage (création de l'extension vector).
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attendance"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

@@ -1,0 +1,19 @@
+# --- Framework web ---
+fastapi>=0.110
+uvicorn[standard]>=0.29
+
+# --- Base de données ---
+sqlalchemy>=2.0
+alembic>=1.13
+psycopg2-binary>=2.9
+pgvector>=0.2.5
+
+# --- Validation / configuration ---
+pydantic>=2.6
+pydantic-settings>=2.2
+email-validator>=2.1
+
+# --- Sécurité / authentification ---
+python-jose[cryptography]>=3.3
+passlib[bcrypt]>=1.7
+python-multipart>=0.0.9
