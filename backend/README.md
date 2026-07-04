@@ -68,6 +68,170 @@ uvicorn app.main:app --reload
 > À changer immédiatement. Pour tester dans Swagger : bouton **Authorize**,
 > saisir l'email dans le champ `username` et le mot de passe.
 
+## Diagrammes UML
+
+Diagrammes fidèles au code de la phase 1 (les versions détaillées sont dans
+`../docs/diagrams/`).
+
+### Diagramme de classes
+
+```mermaid
+classDiagram
+    direction LR
+
+    class EventType {
+        <<enumeration>>
+        ENTRY
+        EXIT
+    }
+    class SessionType {
+        <<enumeration>>
+        SESSION
+        BREAK
+    }
+    class AttendanceStatus {
+        <<enumeration>>
+        PRESENT
+        LATE
+        ABSENT
+    }
+
+    class User {
+        <<table users>>
+        +int id
+        +str email
+        +str full_name
+        +str hashed_password
+        +bool is_active
+        +datetime created_at
+    }
+    class Student {
+        <<table students>>
+        +int id
+        +str full_name
+        +str student_id
+        +Optional~str~ email
+        +Optional~str~ department
+        +Optional~str~ photo_path
+        +Optional~Vector512~ face_embedding
+        +datetime created_at
+        +datetime updated_at
+    }
+    class Schedule {
+        <<table schedules>>
+        +int id
+        +int session_number
+        +str name
+        +Time start_time
+        +Time end_time
+        +SessionType session_type
+    }
+    class AttendanceEvent {
+        <<table attendance_events>>
+        +int id
+        +int student_id
+        +EventType event_type
+        +datetime timestamp
+        +Optional~float~ confidence
+        +Optional~str~ camera_id
+        +Optional~int~ snapshot_id
+    }
+    class AttendanceResult {
+        <<table attendance_results>>
+        +int id
+        +int student_id
+        +int schedule_id
+        +date result_date
+        +AttendanceStatus status
+        +Optional~datetime~ entry_time
+        +Optional~datetime~ exit_time
+        +datetime computed_at
+    }
+    class Snapshot {
+        <<table snapshots>>
+        +int id
+        +Optional~int~ student_id
+        +str image_path
+        +EventType event_type
+        +datetime captured_at
+    }
+
+    Student "1" -- "*" AttendanceEvent : génère
+    Student "1" -- "*" AttendanceResult : concerne
+    Schedule "1" -- "*" AttendanceResult : évalue
+    Student "1" -- "*" Snapshot : capture
+    AttendanceEvent "*" -- "0..1" Snapshot : associé à
+
+    Schedule ..> SessionType : utilise
+    AttendanceEvent ..> EventType : utilise
+    AttendanceResult ..> AttendanceStatus : utilise
+    Snapshot ..> EventType : utilise
+```
+
+### Diagramme de séquence — Authentification (connexion administrateur)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API as API FastAPI
+    participant JWT as Dépendances / JWT
+    participant CRUD as Couche CRUD
+    participant DB as Base PostgreSQL
+
+    Client->>API: POST /api/v1/auth/login (username=email, password)
+    API->>CRUD: authenticate_user(db, email, password)
+    CRUD->>DB: SELECT * FROM users WHERE email = :email
+    DB-->>CRUD: utilisateur (ou aucun)
+    CRUD->>JWT: verify_password(password, hashed_password)
+    JWT-->>CRUD: vrai / faux (bcrypt)
+    alt Identifiants invalides
+        CRUD-->>API: None
+        API-->>Client: 401 « Email ou mot de passe incorrect »
+    else Identifiants valides
+        CRUD-->>API: utilisateur
+        API->>JWT: create_access_token(subject=user.email)
+        JWT-->>API: jeton JWT (HS256, sub=email, exp)
+        API-->>Client: 200 Token { access_token, token_type="bearer" }
+    end
+```
+
+### Diagramme de séquence — Création d'un étudiant (route protégée)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API as API FastAPI
+    participant JWT as Dépendances / JWT
+    participant CRUD as Couche CRUD
+    participant DB as Base PostgreSQL
+
+    Client->>API: POST /api/v1/students (Bearer jeton, données étudiant)
+    API->>JWT: get_current_user(token)
+    JWT->>JWT: decode_access_token(token) -> email
+    alt Jeton invalide / expiré
+        JWT-->>API: 401
+        API-->>Client: 401 « Identifiants invalides ou jeton expiré »
+    else Jeton valide
+        JWT->>DB: SELECT * FROM users WHERE email = :email
+        DB-->>JWT: administrateur (is_active ?)
+        JWT-->>API: administrateur courant
+    end
+    API->>CRUD: get_student_by_matricule(db, student_id)
+    CRUD->>DB: SELECT * FROM students WHERE student_id = :student_id
+    DB-->>CRUD: étudiant existant (ou aucun)
+    CRUD-->>API: résultat
+    alt Matricule déjà présent
+        API-->>Client: 409 « Un étudiant avec ce matricule existe déjà »
+    else Matricule libre
+        API->>CRUD: create_student(db, data)
+        CRUD->>DB: INSERT INTO students (...) + COMMIT
+        DB-->>CRUD: étudiant créé
+        API-->>Client: 201 StudentRead
+    end
+```
+
 ## Structure du projet
 
 ```
