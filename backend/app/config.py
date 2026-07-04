@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     # Seuil de similarité cosinus au-dessus duquel deux visages sont considérés identiques.
     FACE_MATCH_THRESHOLD: float = 0.5
 
+    # --- Moteur de calcul de présence ---
+    # Part minimale de la séance passée en salle pour être compté PRÉSENT.
+    ATTENDANCE_PRESENT_THRESHOLD: float = 0.7  # ≥ 70 % du créneau
+    # Part minimale pour être compté EN RETARD (présence partielle) ; en dessous = ABSENT.
+    ATTENDANCE_LATE_THRESHOLD: float = 0.2  # ≥ 20 % du créneau
+
     # --- Général ---
     PROJECT_NAME: str = "Systeme de presence intelligent"
     API_V1_PREFIX: str = "/api/v1"
