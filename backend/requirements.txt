@@ -16,6 +16,10 @@ email-validator>=2.1
 # --- Sécurité / authentification ---
 python-jose[cryptography]>=3.3
 passlib[bcrypt]>=1.7
+# passlib 1.7.4 (dernière version publiée) ne supporte pas bcrypt>=4.1 : son
+# détecteur de version lit `bcrypt.__about__`, retiré dans les versions récentes,
+# ce qui casse le hachage des mots de passe (AttributeError au premier login).
+bcrypt>=4.0,<4.1
 python-multipart>=0.0.9
 
 # --- Rapports (export Excel / PDF) ---
