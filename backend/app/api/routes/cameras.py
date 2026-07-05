@@ -56,6 +56,17 @@ def update_camera(camera_pk: int, data: CameraUpdate, db: Session = Depends(get_
     camera = crud_camera.get_camera(db, camera_pk)
     if camera is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera introuvable")
+
+    # L'invariant present > late doit tenir sur les valeurs EFFECTIVES après
+    # fusion avec la ligne stockée : une mise à jour partielle (un seul seuil
+    # fourni) ne doit pas pouvoir enregistrer une configuration incohérente.
+    present = data.present_threshold if data.present_threshold is not None else camera.present_threshold
+    late = data.late_threshold if data.late_threshold is not None else camera.late_threshold
+    if present <= late:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="present_threshold doit etre strictement superieur a late_threshold",
+        )
     return crud_camera.update_camera(db, camera, data)
 
 
