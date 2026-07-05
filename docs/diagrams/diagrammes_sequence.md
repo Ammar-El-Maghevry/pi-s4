@@ -183,3 +183,87 @@ sequenceDiagram
     Engine->>DB: POST /attendance/compute → calcul du statut
     DB-->>Engine: attendance_results (present / late / absent)
 ```
+
+---
+
+## 5. Configuration d'une caméra par l'administrateur — *implémenté*
+
+Source : `app/api/routes/cameras.py`, `app/schemas/camera.py`, `app/crud/camera.py`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Administrateur
+    participant API as API FastAPI<br/>(routes/cameras.py)
+    participant JWT as Dépendances / JWT<br/>(core/deps.py)
+    participant Schema as Schéma Pydantic<br/>(schemas/camera.py)
+    participant CRUD as Couche CRUD<br/>(crud/camera.py)
+    participant DB as Base PostgreSQL
+
+    Client->>API: POST /api/v1/cameras (ou PUT /cameras/{id})<br/>Authorization: Bearer <jeton><br/>{ name, source_url, ligne, seuils... }
+
+    Note over API,JWT: Dépendance get_current_user (protège la route)
+    API->>JWT: get_current_user(token)
+    JWT-->>API: administrateur courant (ou 401)
+
+    Note over API,Schema: Validation des seuils
+    API->>Schema: valider CameraCreate / CameraUpdate
+    alt Seuils hors [0,1] ou present_threshold <= late_threshold
+        Schema-->>API: ValidationError
+        API-->>Client: 422 Unprocessable Entity
+    else Données valides
+        Schema-->>API: données validées
+        API->>CRUD: create_camera / update_camera(db, data)
+        CRUD->>DB: INSERT / UPDATE cameras<br/>(source_url complet, identifiants inclus)
+        DB-->>CRUD: caméra enregistrée
+        CRUD-->>API: objet Camera
+        Note over API,Schema: CameraRead masque le source_url
+        API->>Schema: mask_source_url(source_url)
+        Schema-->>API: rtsp://***:***@host:554/stream
+        API-->>Client: 201 / 200 CameraRead (identifiants masqués)
+    end
+```
+
+---
+
+## 6. Test de connexion à une caméra — *implémenté*
+
+Source : `app/api/routes/cameras.py`, `app/services/camera/connection.py`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Administrateur
+    participant API as API FastAPI<br/>(routes/cameras.py)
+    participant CRUD as Couche CRUD<br/>(crud/camera.py)
+    participant DB as Base PostgreSQL
+    participant Svc as Service caméra<br/>(services/camera/connection.py)
+    participant CV as OpenCV<br/>(import paresseux)
+
+    Client->>API: POST /api/v1/cameras/{id}/test-connection<br/>Authorization: Bearer <jeton>
+    Note over API: route protégée par get_current_user
+
+    API->>CRUD: get_camera(db, id)
+    CRUD->>DB: SELECT * FROM cameras WHERE id = :id
+    DB-->>CRUD: caméra (ou aucune)
+    alt Caméra introuvable
+        API-->>Client: 404 « Camera introuvable »
+    else Caméra trouvée
+        API->>Svc: test_camera_connection(source_url)
+        Svc->>CV: import cv2 (au premier appel)
+        alt OpenCV non installé
+            CV-->>Svc: ImportError
+            Svc-->>API: { success:false, message:"OpenCV indisponible" }
+        else OpenCV disponible
+            Svc->>CV: VideoCapture(source).read() (timeout court)
+            alt Flux injoignable / aucune image
+                CV-->>Svc: échec
+                Svc-->>API: { success:false, message:"..." }
+            else Une image lue
+                CV-->>Svc: frame (hauteur, largeur)
+                Svc-->>API: { success:true, width, height }
+            end
+        end
+        API-->>Client: 200 CameraTestResult
+    end
+```

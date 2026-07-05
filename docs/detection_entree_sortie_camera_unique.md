@@ -20,9 +20,11 @@ module de corrélation ni de synchronisation entre deux flux).
 
 ## Principe de fonctionnement
 
-Une caméra est installée à l'entrée de la salle. Une ligne virtuelle est
-configurée dans l'image (deux points). Le sens se déduit de la traversée de cette
-ligne par le centre de la boîte suivie :
+Une caméra est installée à l'entrée de la salle. Sa connexion (URL RTSP ou index
+USB) et sa ligne de franchissement sont **configurées par l'administrateur depuis
+l'application** (API `/api/v1/cameras`, table `cameras`), sans toucher au code ni
+au `.env`. Une ligne virtuelle est définie dans l'image (deux points). Le sens se
+déduit de la traversée de cette ligne par le centre de la boîte suivie :
 
 | Sens de traversée de la ligne | Sens déduit |
 |-------------------------------|-------------|
@@ -70,11 +72,18 @@ données déjà enregistrées.
 
 ## Impact sur la base de données et la logique métier
 
-**Aucun changement de schéma ni de logique métier.**
+**La logique métier (moteur de présence, événements, dashboard, rapports) ne
+change pas.** Le seul ajout au schéma est la table `cameras`, qui stocke la
+configuration éditée par l'administrateur.
 
 - Le champ `attendance_events.camera_id` **reste** : il identifie la caméra/salle
   (utile pour un futur multi-salles). En revanche, la notion de **rôle** de
   caméra (intérieur / extérieur) du schéma à deux caméras est **abandonnée**.
+- La table `cameras` (voir `backend/app/models/camera.py`) porte, par caméra :
+  `source_url` (masqué en lecture), `is_active`, la ligne de franchissement
+  (`line_x1..line_y2`, `crossing_direction`), `min_crossing_frames`,
+  `cooldown_seconds` et les seuils (`present_threshold`, `late_threshold`,
+  `face_match_threshold`).
 - Le service IA demeure un simple **producteur d'événements** entrée/sortie : il
   écrit les mêmes `attendance_events` que ceux saisis manuellement via
   `POST /api/v1/events`.
@@ -88,12 +97,22 @@ caméra.
 
 ---
 
-## Paramètres de configuration (`app/config.py`)
+## Paramètres de configuration (table `cameras`, éditée par l'admin)
 
-| Paramètre | Rôle |
-|-----------|------|
-| `CAMERA_ID` | Identifiant de la caméra/salle, stocké dans `attendance_events.camera_id`. |
-| `LINE_CROSSING` | Coordonnées de la ligne virtuelle (2 points, placeholder). |
-| `COOLDOWN_SECONDS` | Fenêtre anti-doublon entre deux événements d'un même track. |
-| `FACE_MATCH_THRESHOLD` | Seuil de similarité cosinus pour identifier un étudiant. |
-| `FACE_EMBEDDING_DIM` | Dimension de l'embedding (512, ArcFace). |
+Ces paramètres ne vivent plus dans `.env` : ils sont configurés via l'API
+`/api/v1/cameras` et stockés par caméra dans la table `cameras`.
+
+| Paramètre (colonne) | Rôle |
+|---------------------|------|
+| `source_url` | URL RTSP ou index USB de la caméra (masqué en lecture). |
+| `is_active` | Caméra activée ou non. |
+| `line_x1..line_y2` | Coordonnées des deux points de la ligne virtuelle. |
+| `crossing_direction` | Convention de sens (haut→bas = entrée, ou l'inverse). |
+| `min_crossing_frames` | Nb minimal de frames validant une traversée complète. |
+| `cooldown_seconds` | Fenêtre anti-doublon entre deux événements d'un même track. |
+| `present_threshold` / `late_threshold` | Seuils de présence / retard. |
+| `face_match_threshold` | Seuil de similarité cosinus pour identifier un étudiant. |
+
+> Le `.env` ne conserve que les secrets d'infrastructure (`SECRET_KEY`,
+> `DATABASE_URL`). La dimension de l'embedding (`FACE_EMBEDDING_DIM = 512`,
+> ArcFace) reste une constante applicative dans `app/config.py`.

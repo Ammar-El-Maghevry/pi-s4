@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from app.api.routes import (
     attendance,
     auth,
+    cameras,
     dashboard,
     events,
     reports,
@@ -24,6 +25,7 @@ api_router.include_router(events.router)
 api_router.include_router(attendance.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(reports.router)
+api_router.include_router(cameras.router)
 
 # Phases suivantes (à activer plus tard) :
 # api_router.include_router(camera.router)  # service caméra/inférence temps réel

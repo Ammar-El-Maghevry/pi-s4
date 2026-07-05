@@ -28,27 +28,17 @@ class Settings(BaseSettings):
     # Seuil de similarité cosinus au-dessus duquel deux visages sont considérés identiques.
     FACE_MATCH_THRESHOLD: float = 0.5
 
-    # --- Moteur de calcul de présence ---
+    # --- Moteur de calcul de présence (valeurs par défaut du moteur) ---
     # Part minimale de la séance passée en salle pour être compté PRÉSENT.
     ATTENDANCE_PRESENT_THRESHOLD: float = 0.7  # ≥ 70 % du créneau
     # Part minimale pour être compté EN RETARD (présence partielle) ; en dessous = ABSENT.
     ATTENDANCE_LATE_THRESHOLD: float = 0.2  # ≥ 20 % du créneau
 
-    # --- Caméra unique + ligne de franchissement (préparé pour la phase future) ---
-    # Le système utilise UNE seule caméra ; le sens entrée/sortie est déduit du
-    # sens de traversée d'une ligne virtuelle par le track suivi (ByteTrack).
-    # Il n'y a plus de rôle de caméra intérieur/extérieur (abandon du multi-caméras).
-    #
-    # Identifiant de la caméra source, stocké dans attendance_events.camera_id
-    # (utile pour un futur multi-salles).
-    CAMERA_ID: str = "cam-entree-1"
-    # Ligne de franchissement virtuelle : placeholder à préciser lors de
-    # l'implémentation. Deux points [[x1, y1], [x2, y2]] en pixels ; par
-    # convention, une traversée haut → bas = entrée, bas → haut = sortie.
-    LINE_CROSSING: str = ""  # ex. "[[0, 240], [640, 240]]"
-    # Fenêtre anti-doublon : délai minimal (secondes) entre deux événements
-    # générés pour un même track, afin d'éviter les passages comptés en double.
-    COOLDOWN_SECONDS: int = 5
+    # NB : les paramètres propres à une caméra (source du flux, ligne de
+    # franchissement, seuils, cooldown, sens de traversée) ne vivent plus ici ni
+    # dans le .env. Ils sont configurés par l'administrateur via l'API et stockés
+    # en base (table `cameras`). Le .env ne contient que les secrets
+    # d'infrastructure (SECRET_KEY, DATABASE_URL).
 
     # --- Général ---
     PROJECT_NAME: str = "Systeme de presence intelligent"
