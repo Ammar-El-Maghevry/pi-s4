@@ -78,3 +78,43 @@ def test_update_verifie_seuils_seulement_si_les_deux_fournis():
     # Les deux fournis et incohérents : erreur.
     with pytest.raises(ValidationError):
         CameraUpdate(present_threshold=0.2, late_threshold=0.6)
+
+
+# --------------------- Cas limites du masquage (sécurité) ------------------- #
+
+def test_mask_mot_de_passe_contenant_un_slash():
+    # Un "/" dans le mot de passe ne doit pas faire échouer le masquage.
+    masked = mask_source_url("rtsp://admin:se/cret@192.168.1.10:554/stream")
+    assert "admin" not in masked and "cret" not in masked
+    assert masked == "rtsp://***:***@192.168.1.10:554/stream"
+
+
+def test_mask_mot_de_passe_contenant_un_arobase():
+    # Un "@" dans le mot de passe : tout doit être masqué jusqu'au dernier "@".
+    masked = mask_source_url("rtsp://user:p@ss@cam.local:554/s")
+    assert "user" not in masked and "ss@cam" not in masked.replace("***:***@", "")
+    assert masked == "rtsp://***:***@cam.local:554/s"
+
+
+def test_mask_dans_un_message_d_erreur():
+    # Le masquage doit aussi fonctionner sur un texte contenant l'URL
+    # (ex. message d'erreur OpenCV/FFmpeg renvoyé par le test de connexion).
+    message = "Erreur : impossible d'ouvrir rtsp://admin:secret@cam.local:554/s (timeout)"
+    masked = mask_source_url(message)
+    assert "secret" not in masked
+    assert "rtsp://***:***@cam.local:554/s" in masked
+
+
+# --------------------------- Null explicite refusé -------------------------- #
+
+def test_update_rejette_null_explicite_sur_champ_obligatoire():
+    # name est NOT NULL en base : un null explicite doit donner une 422, pas
+    # une IntegrityError (500) au moment du commit.
+    with pytest.raises(ValidationError):
+        CameraUpdate.model_validate({"name": None})
+
+
+def test_update_accepte_null_sur_les_champs_nullables():
+    # location et les coordonnées de ligne sont nullables : null accepté.
+    cam = CameraUpdate.model_validate({"location": None, "line_x1": None})
+    assert cam.location is None and cam.line_x1 is None

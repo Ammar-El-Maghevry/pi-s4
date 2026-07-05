@@ -13,6 +13,8 @@ Contraintes respectées :
 """
 from dataclasses import dataclass
 
+from app.schemas.camera import mask_source_url
+
 
 @dataclass
 class ConnectionResult:
@@ -55,13 +57,16 @@ def test_camera_connection(source_url: str, timeout_ms: int = 3000) -> Connectio
     source = _normalize_source(source_url)
     capture = None
     try:
-        capture = cv2.VideoCapture(source)
-
         # Délai d'ouverture / lecture (best-effort, ignoré par certains backends).
+        # IMPORTANT : ces propriétés doivent être passées AU constructeur — les
+        # fixer après coup via `capture.set()` n'a aucun effet sur l'ouverture,
+        # qui est bloquante et a déjà eu lieu dans `VideoCapture(...)`.
+        open_params = []
         for prop in ("CAP_PROP_OPEN_TIMEOUT_MSEC", "CAP_PROP_READ_TIMEOUT_MSEC"):
             code = getattr(cv2, prop, None)
             if code is not None:
-                capture.set(code, timeout_ms)
+                open_params.extend([code, timeout_ms])
+        capture = cv2.VideoCapture(source, cv2.CAP_ANY, open_params)
 
         if not capture.isOpened():
             return ConnectionResult(False, "Impossible d'ouvrir le flux (camera injoignable).")
@@ -75,7 +80,9 @@ def test_camera_connection(source_url: str, timeout_ms: int = 3000) -> Connectio
             True, "Connexion reussie : une image a ete lue.", width=int(width), height=int(height)
         )
     except Exception as exc:  # pragma: no cover - dépend du matériel/réseau
-        return ConnectionResult(False, f"Erreur lors du test : {exc}")
+        # Les erreurs OpenCV/FFmpeg peuvent contenir l'URL complète (identifiants
+        # inclus) : on masque le message avant de le renvoyer au client.
+        return ConnectionResult(False, f"Erreur lors du test : {mask_source_url(str(exc))}")
     finally:
         if capture is not None:
             capture.release()

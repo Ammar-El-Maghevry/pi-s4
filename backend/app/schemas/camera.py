@@ -13,13 +13,16 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.models.enums import CrossingDirection
 
-# Motif : capture les identifiants entre "://" et "@" pour les remplacer.
-_CREDENTIALS_RE = re.compile(r"(://)([^@/]+)@")
+# Motif : capture les identifiants entre "://" et le DERNIER "@" du même mot.
+# `\S+` gourmand couvre les mots de passe contenant "/" ou "@" ; en contrepartie,
+# une URL sans identifiants dont le chemin contient "@" serait sur-masquée, ce
+# qui est le sens d'erreur sûr (on ne fuit jamais un identifiant).
+_CREDENTIALS_RE = re.compile(r"(://)(\S+)@")
 
 
 def mask_source_url(url: str) -> str:
     """
-    Masque les identifiants d'une URL de flux.
+    Masque les identifiants d'une URL de flux (ou dans un texte la contenant).
 
     rtsp://admin:secret@192.168.1.10:554/stream → rtsp://***:***@192.168.1.10:554/stream
     Une source sans identifiants (index USB, URL publique) est renvoyée telle quelle.
@@ -98,6 +101,21 @@ class CameraUpdate(BaseModel):
             raise ValueError(
                 "present_threshold doit etre strictement superieur a late_threshold"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _reject_explicit_nulls(self):
+        """
+        Refuse un `null` explicite sur les champs NOT NULL en base.
+
+        Seul `location` (et les coordonnées de ligne) peuvent être remis à null ;
+        pour les autres champs, « optionnel » signifie « omis », pas « null » :
+        laisser passer un null provoquerait une violation NOT NULL (erreur 500).
+        """
+        nullable_fields = {"location", "line_x1", "line_y1", "line_x2", "line_y2"}
+        for field in self.model_fields_set:
+            if field not in nullable_fields and getattr(self, field) is None:
+                raise ValueError(f"Le champ '{field}' ne peut pas etre null")
         return self
 
 

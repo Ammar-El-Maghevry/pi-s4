@@ -5,7 +5,7 @@ Le moteur écrit ici le statut par (étudiant, séance, date). L'upsert respecte
 contrainte d'unicité et rend le recalcul **idempotent** : relancer le calcul
 d'une date met à jour les lignes existantes au lieu d'en créer de nouvelles.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -44,7 +44,9 @@ def upsert_result(
         existing.status = status
         existing.entry_time = entry_time
         existing.exit_time = exit_time
-        existing.computed_at = datetime.utcnow()
+        # Datetime AVEC fuseau : la colonne est timestamptz, un utcnow() naïf
+        # serait interprété dans le fuseau de la session (décalage silencieux).
+        existing.computed_at = datetime.now(timezone.utc)
         db.flush()
         return existing
 

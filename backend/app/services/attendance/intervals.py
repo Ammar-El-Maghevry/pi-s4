@@ -31,13 +31,16 @@ class Interval:
 
 def _naive(dt: datetime) -> datetime:
     """
-    Ramène un datetime « aware » (avec fuseau) en datetime « naïf ».
+    Ramène un datetime « aware » (avec fuseau) en datetime « naïf » LOCAL.
 
     Les événements en base sont horodatés avec fuseau, tandis que les horodatages
     injectés en test peuvent être naïfs. Mélanger les deux provoque une erreur
-    lors des soustractions. On uniformise donc tout en naïf (même fuseau supposé).
+    lors des soustractions. On convertit d'abord vers l'heure locale du serveur
+    (celle des fenêtres de séance) AVANT de retirer le fuseau : supprimer le
+    fuseau sans convertir décalerait tout événement reçu avec un offset non
+    local (ex. un timestamp en +00:00 sur un serveur en UTC+2).
     """
-    return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+    return dt.astimezone().replace(tzinfo=None) if dt.tzinfo is not None else dt
 
 
 def build_intervals(events) -> list[Interval]:
