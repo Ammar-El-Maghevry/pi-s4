@@ -17,3 +17,13 @@ email-validator>=2.1
 python-jose[cryptography]>=3.3
 passlib[bcrypt]>=1.7
 python-multipart>=0.0.9
+
+# --- Rapports (export Excel / PDF) ---
+openpyxl>=3.1
+reportlab>=4.0
+
+# --- Caméras (test de connexion aux flux) ---
+opencv-python-headless>=4.9
+
+# --- Tests ---
+pytest>=8.0
