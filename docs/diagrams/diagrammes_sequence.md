@@ -85,52 +85,101 @@ sequenceDiagram
 
 ---
 
-## 3. Reconnaissance et calcul de présence — *(cible / phase future — NON IMPLÉMENTÉ)*
+## 3. Calcul de présence — *implémenté*
 
-> ⚠️ **Ce flux n'existe pas encore dans le code.** Aucun module `services/`,
-> aucune route caméra/présence, aucune écriture dans `attendance_events` /
-> `attendance_results`. Diagramme reconstitué à partir de la feuille de route
-> (`backend/README.md`) et de la note d'architecture
-> (`detection_entree_sortie_deux_cameras.md`). Les composants marqués
-> *à définir* restent à concevoir.
+Source : `app/api/routes/attendance.py`, `app/services/attendance/*`,
+`app/crud/attendance_event.py`, `app/crud/attendance_result.py`,
+`app/crud/schedule.py`.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant CamA as Caméra A (extérieure)
-    participant CamB as Caméra B (intérieure)
-    participant Pipe as Pipeline vision<br/>RetinaFace + ByteTrack + InsightFace<br/>(à définir)
-    participant Corr as Module de corrélation<br/>(Correlator — à définir)
-    participant CRUD as Couche CRUD événements<br/>(à définir)
-    participant Engine as Moteur de calcul<br/>de présence (phase 6 — à définir)
+    actor Client
+    participant API as API FastAPI<br/>(routes/attendance.py)
+    participant Svc as Service présence<br/>(services/attendance/service.py)
+    participant Engine as Moteur pur<br/>(intervals.py + engine.py)
+    participant CRUD as Couche CRUD<br/>(events / results / schedule)
     participant DB as Base PostgreSQL
 
-    CamA->>Pipe: flux vidéo (couloir)
-    CamB->>Pipe: flux vidéo (salle)
+    Client->>API: POST /api/v1/attendance/compute?date=YYYY-MM-DD<br/>(&student_id optionnel)
+    Note over API: route protégée par get_current_user
 
-    Note over Pipe: Détection visage -> suivi -> anti-spoofing -> reconnaissance
-    Pipe->>DB: recherche d'identité par similarité cosinus<br/>(pgvector, seuil 0.5) sur face_embedding
+    alt student_id fourni mais introuvable
+        API-->>Client: 404 « Etudiant introuvable »
+    else calcul lancé
+        API->>Svc: compute_date(db, on_date, student_id)
+
+        alt student_id absent
+            Svc->>CRUD: distinct_student_ids_with_events_on_date(db, on_date)
+            CRUD->>DB: SELECT DISTINCT student_id des événements du jour
+            DB-->>CRUD: liste d'étudiants
+            CRUD-->>Svc: [étudiants avec événements]
+        end
+
+        loop pour chaque étudiant
+            Svc->>CRUD: get_events_for_student_on_date(db, student_id, on_date)
+            CRUD->>DB: SELECT événements (triés par timestamp)
+            DB-->>Svc: entrées / sorties brutes
+            Svc->>Engine: build_intervals(events)
+            Engine-->>Svc: intervalles [entrée→sortie] (sortie manquante = ouvert)
+
+            loop pour chaque séance (SessionType.SESSION)
+                Svc->>Engine: compute_session(intervals, window_start, window_end)
+                Note over Engine: taux de chevauchement → present / late / absent
+                Engine-->>Svc: SessionComputation { status, entry_time, exit_time }
+                Svc->>CRUD: upsert_result(...) (idempotent)
+                CRUD->>DB: INSERT/UPDATE attendance_results<br/>(contrainte uq_presence_unique)
+            end
+        end
+
+        Svc->>DB: COMMIT
+        Svc-->>API: ComputeReport { students_processed, sessions_per_student, results_written }
+        API-->>Client: 200 ComputeReportRead
+    end
+```
+
+---
+
+## 4. Flux caméra (une caméra + ligne de franchissement) — *(cible / phase future — NON IMPLÉMENTÉ)*
+
+> ⚠️ **Ce flux n'existe pas encore dans le code.** Le service IA est un simple
+> **producteur d'événements** : il écrit les mêmes `attendance_events` que la
+> saisie manuelle (`POST /api/v1/events`), puis le calcul de présence (section 3,
+> déjà implémenté) s'applique sans changement. Diagramme reconstitué à partir de
+> `app/services/ai/README.md` et de
+> `docs/detection_entree_sortie_camera_unique.md`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cam as Caméra unique<br/>(entrée de la salle)
+    participant Pipe as Pipeline vision<br/>RetinaFace + ByteTrack<br/>+ MiniFASNet + InsightFace<br/>(à définir)
+    participant Line as Ligne de franchissement<br/>(LineCrossingDirection — à définir)
+    participant API as API événements<br/>(POST /api/v1/events)
+    participant Engine as Calcul de présence<br/>(section 3 — implémenté)
+    participant DB as Base PostgreSQL
+
+    Cam->>Pipe: flux vidéo (une seule caméra)
+
+    Note over Pipe: Détection (RetinaFace) → suivi (ByteTrack)<br/>→ anti-spoofing (MiniFASNet) → reconnaissance
+    Pipe->>DB: recherche d'identité par similarité cosinus<br/>(pgvector, seuil FACE_MATCH_THRESHOLD) sur face_embedding
     DB-->>Pipe: étudiant reconnu (ou inconnu)
-    Pipe->>Corr: Observation { identité, caméra, horodatage }
 
-    Note over Corr: Appariement des identités entre A et B<br/>dans une fenêtre temporelle courte
-    alt Séquence A puis B
-        Corr->>Corr: sens = ENTRÉE (entry)
-    else Séquence B puis A
-        Corr->>Corr: sens = SORTIE (exit)
-    else Une seule caméra
-        Corr->>Corr: événement incertain (ignoré / à réviser)
+    Pipe->>Line: track { id, trajectoire, identité, horodatage }
+    Note over Line: sens de traversée de la ligne virtuelle<br/>validé sur N frames + cooldown anti-doublon
+    alt Traversée haut → bas
+        Line->>Line: sens = ENTRÉE (entry)
+    else Traversée bas → haut
+        Line->>Line: sens = SORTIE (exit)
+    else Pas de traversée complète
+        Line->>Line: ignoré (arrêt sur le seuil / bruit)
     end
 
-    Corr->>CRUD: enregistrer AttendanceEvent + Snapshot
-    CRUD->>DB: INSERT INTO snapshots (...)
-    CRUD->>DB: INSERT INTO attendance_events<br/>(student_id, event_type, timestamp, confidence, camera_id, snapshot_id)
-    DB-->>CRUD: événement enregistré
+    Line->>API: POST /events { student_id, event_type, camera_id } (+ Snapshot)
+    API->>DB: INSERT INTO attendance_events (...)
+    DB-->>API: événement enregistré
 
-    Note over Engine,DB: Périodiquement / en fin de séance
-    Engine->>DB: SELECT événements par étudiant et séance
-    DB-->>Engine: entrées / sorties brutes
-    Engine->>Engine: corréler entrée/sortie -> statut<br/>(present / late / absent)
-    Engine->>DB: UPSERT attendance_results<br/>(contrainte uq_presence_unique)
-    DB-->>Engine: présence calculée
+    Note over Engine,DB: Périodiquement / en fin de séance (cf. section 3)
+    Engine->>DB: POST /attendance/compute → calcul du statut
+    DB-->>Engine: attendance_results (present / late / absent)
 ```

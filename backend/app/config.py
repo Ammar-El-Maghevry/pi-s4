@@ -34,6 +34,22 @@ class Settings(BaseSettings):
     # Part minimale pour être compté EN RETARD (présence partielle) ; en dessous = ABSENT.
     ATTENDANCE_LATE_THRESHOLD: float = 0.2  # ≥ 20 % du créneau
 
+    # --- Caméra unique + ligne de franchissement (préparé pour la phase future) ---
+    # Le système utilise UNE seule caméra ; le sens entrée/sortie est déduit du
+    # sens de traversée d'une ligne virtuelle par le track suivi (ByteTrack).
+    # Il n'y a plus de rôle de caméra intérieur/extérieur (abandon du multi-caméras).
+    #
+    # Identifiant de la caméra source, stocké dans attendance_events.camera_id
+    # (utile pour un futur multi-salles).
+    CAMERA_ID: str = "cam-entree-1"
+    # Ligne de franchissement virtuelle : placeholder à préciser lors de
+    # l'implémentation. Deux points [[x1, y1], [x2, y2]] en pixels ; par
+    # convention, une traversée haut → bas = entrée, bas → haut = sortie.
+    LINE_CROSSING: str = ""  # ex. "[[0, 240], [640, 240]]"
+    # Fenêtre anti-doublon : délai minimal (secondes) entre deux événements
+    # générés pour un même track, afin d'éviter les passages comptés en double.
+    COOLDOWN_SECONDS: int = 5
+
     # --- Général ---
     PROJECT_NAME: str = "Systeme de presence intelligent"
     API_V1_PREFIX: str = "/api/v1"
