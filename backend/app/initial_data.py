@@ -5,7 +5,7 @@ Script d'initialisation des données de base.
     python -m app.initial_data
 
 Crée :
-- un administrateur par défaut (admin@univ.local / admin123) si aucun n'existe ;
+- un administrateur par défaut (admin@example.com / admin123) si aucun n'existe ;
 - les cinq séances quotidiennes et les pauses de l'emploi du temps.
 
 Le mot de passe par défaut doit être changé immédiatement en production.
@@ -37,16 +37,16 @@ def seed() -> None:
     db = SessionLocal()
     try:
         # 1) Administrateur par défaut
-        if get_user_by_email(db, "admin@univ.local") is None:
+        if get_user_by_email(db, "admin@example.com") is None:
             create_user(
                 db,
                 UserCreate(
-                    email="admin@univ.local",
+                    email="admin@example.com",
                     full_name="Administrateur",
                     password="admin123",
                 ),
             )
-            print("Administrateur cree : admin@univ.local / admin123")
+            print("Administrateur cree : admin@example.com / admin123")
         else:
             print("Administrateur deja present.")
 

@@ -16,6 +16,9 @@ email-validator>=2.1
 # --- Sécurité / authentification ---
 python-jose[cryptography]>=3.3
 passlib[bcrypt]>=1.7
+# bcrypt>=4.1 removed the module attribute passlib's backend detection reads,
+# breaking password hashing at import time. Pin until passlib publishes a fix.
+bcrypt<4.1
 python-multipart>=0.0.9
 
 # --- Rapports (export Excel / PDF) ---
@@ -24,6 +27,14 @@ reportlab>=4.0
 
 # --- Caméras (test de connexion aux flux) ---
 opencv-python-headless>=4.9
+
+# --- Camera telephone (reception WebRTC en direct, PyAV vient en dependance) ---
+aiortc>=1.9,<2.0
+
+# --- Reconnaissance faciale (enrolement + reconnaissance, CPU) ---
+insightface>=0.7.3
+onnxruntime>=1.17
+numpy>=1.26
 
 # --- Tests ---
 pytest>=8.0

@@ -11,10 +11,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.enums import CrossingDirection
+from app.models.enums import CameraSourceType, CrossingDirection
 
 # Motif : capture les identifiants entre "://" et "@" pour les remplacer.
 _CREDENTIALS_RE = re.compile(r"(://)([^@/]+)@")
+
+# Valeur de `source_url` stockée pour une caméra téléphone (jamais utilisée
+# pour ouvrir un flux : le flux réel vit en mémoire, indexé par `webrtc_token`).
+PHONE_SOURCE_URL_PLACEHOLDER = "phone-camera"
 
 
 def mask_source_url(url: str) -> str:
@@ -31,9 +35,12 @@ def mask_source_url(url: str) -> str:
 
 class CameraBase(BaseModel):
     """Champs communs de configuration d'une caméra."""
-    name: str
-    location: str | None = None
-    source_url: str
+    name: str = Field(min_length=1, max_length=100)
+    location: str | None = Field(default=None, max_length=150)
+    source_type: CameraSourceType = CameraSourceType.IP_CAMERA
+    # Obligatoire uniquement pour une caméra IP (voir `_check_source_url` ci-dessous) ;
+    # ignoré/ecrase par le CRUD pour une caméra téléphone.
+    source_url: str | None = Field(default=None, max_length=512)
     is_active: bool = True
 
     line_x1: int | None = None
@@ -57,6 +64,13 @@ class CameraBase(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _check_source_url(self):
+        """Une caméra IP a besoin d'une source_url non vide ; une caméra téléphone non."""
+        if self.source_type == CameraSourceType.IP_CAMERA and not (self.source_url or "").strip():
+            raise ValueError("source_url est obligatoire pour une camera IP")
+        return self
+
 
 class CameraCreate(CameraBase):
     """Données requises pour créer une caméra (name et source_url obligatoires)."""
@@ -70,8 +84,9 @@ class CameraUpdate(BaseModel):
     Les seuils fournis sont validés dans [0, 1] ; si les deux seuils sont
     fournis ensemble, on vérifie present > late.
     """
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=100)
     location: str | None = None
+    source_type: CameraSourceType | None = None
     source_url: str | None = None
     is_active: bool | None = None
 
@@ -106,7 +121,11 @@ class CameraRead(BaseModel):
     id: int
     name: str
     location: str | None = None
+    source_type: CameraSourceType
     source_url: str
+    # Jeton d'appairage du lien /phone-camera/<token> (caméras téléphone uniquement) ;
+    # non masqué, ce n'est pas un identifiant de connexion et seuls les admins le voient.
+    webrtc_token: str | None = None
     is_active: bool
 
     line_x1: int | None = None
@@ -139,3 +158,30 @@ class CameraTestResult(BaseModel):
     message: str
     width: int | None = None
     height: int | None = None
+
+
+class PhoneCameraInfo(BaseModel):
+    """
+    Informations publiques renvoyées à la page /phone-camera/<token>.
+
+    Volontairement minimal : la page tourne dans le navigateur du téléphone,
+    sans authentification admin, donc aucun réglage sensible (seuils, ligne de
+    franchissement) n'est exposé ici.
+    """
+    name: str
+    location: str | None = None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WebRTCOffer(BaseModel):
+    """Offre SDP envoyée par le téléphone pour démarrer la diffusion."""
+    sdp: str
+    type: str
+
+
+class WebRTCAnswer(BaseModel):
+    """Réponse SDP renvoyée par le serveur."""
+    sdp: str
+    type: str

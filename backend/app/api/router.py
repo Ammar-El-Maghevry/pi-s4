@@ -12,6 +12,7 @@ from app.api.routes import (
     cameras,
     dashboard,
     events,
+    phone_camera,
     reports,
     schedules,
     students,
@@ -26,6 +27,7 @@ api_router.include_router(attendance.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(reports.router)
 api_router.include_router(cameras.router)
+api_router.include_router(phone_camera.router)
 
 # Phases suivantes (à activer plus tard) :
 # api_router.include_router(camera.router)  # service caméra/inférence temps réel

@@ -10,7 +10,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from app.models.enums import CrossingDirection
+from app.models.enums import CameraSourceType, CrossingDirection
 from app.schemas.camera import CameraCreate, CameraRead, CameraUpdate, mask_source_url
 
 
@@ -37,7 +37,9 @@ def test_camera_read_masque_le_source_url():
             "id": 1,
             "name": "Salle A",
             "location": None,
+            "source_type": CameraSourceType.IP_CAMERA,
             "source_url": "rtsp://user:pass@cam.local:554/s",
+            "webrtc_token": None,
             "is_active": True,
             "line_x1": None, "line_y1": None, "line_x2": None, "line_y2": None,
             "crossing_direction": CrossingDirection.TOP_TO_BOTTOM_IS_ENTRY,

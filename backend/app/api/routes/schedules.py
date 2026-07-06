@@ -1,16 +1,18 @@
 """
-Routes de l'emploi du temps (lecture seule).
+Routes de l'emploi du temps.
 
 L'emploi du temps est fixe (inséré au démarrage) ; ces routes permettent au
-frontend d'afficher les créneaux et au moteur de présence de s'y référer.
-Toutes les routes sont protégées par l'authentification administrateur.
+frontend d'afficher les créneaux, d'assigner la caméra de la salle à chaque
+séance, et au moteur de présence de s'y référer. Toutes les routes sont
+protégées par l'authentification administrateur.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
+from app.crud import camera as crud_camera
 from app.crud import schedule as crud_schedule
-from app.schemas.schedule import ScheduleRead
+from app.schemas.schedule import ScheduleRead, ScheduleUpdate
 
 router = APIRouter(
     prefix="/schedules",
@@ -32,3 +34,16 @@ def get_schedule(schedule_pk: int, db: Session = Depends(get_db)):
     if schedule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Creneau introuvable")
     return schedule
+
+
+@router.put("/{schedule_pk}", response_model=ScheduleRead)
+def update_schedule(schedule_pk: int, data: ScheduleUpdate, db: Session = Depends(get_db)):
+    """Assigne (ou retire) la caméra de la salle où se déroule cette séance."""
+    schedule = crud_schedule.get_schedule(db, schedule_pk)
+    if schedule is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Creneau introuvable")
+
+    if data.camera_id is not None and crud_camera.get_camera(db, data.camera_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera introuvable")
+
+    return crud_schedule.update_schedule(db, schedule, data)

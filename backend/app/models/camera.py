@@ -16,7 +16,7 @@ from sqlalchemy import Boolean, DateTime, Enum, Float, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from app.models.enums import CrossingDirection
+from app.models.enums import CameraSourceType, CrossingDirection
 
 
 class Camera(Base):
@@ -27,10 +27,18 @@ class Camera(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     location: Mapped[str | None] = mapped_column(String(150), nullable=True)
 
+    # Origine du flux : caméra IP/RTSP/USB classique, ou téléphone (WebRTC).
+    source_type: Mapped[CameraSourceType] = mapped_column(
+        Enum(CameraSourceType), default=CameraSourceType.IP_CAMERA, nullable=False
+    )
     # Source du flux : URL RTSP (rtsp://user:pass@host:554/stream) ou index USB.
     # La valeur complète (avec identifiants) reste en base pour le service caméra ;
     # elle n'est JAMAIS renvoyée en clair par l'API (voir le schéma de lecture).
+    # Pour une caméra téléphone, contient un simple placeholder (non utilisé) :
+    # le flux réel vit en mémoire, indexé par `webrtc_token`.
     source_url: Mapped[str] = mapped_column(String(512), nullable=False)
+    # Jeton d'appairage unique du lien /phone-camera/<token> (caméras téléphone uniquement).
+    webrtc_token: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # --- Ligne de franchissement virtuelle (coordonnées en pixels) ---

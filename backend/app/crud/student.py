@@ -69,3 +69,14 @@ def delete_student(db: Session, student: Student) -> None:
     """Supprime un étudiant."""
     db.delete(student)
     db.commit()
+
+
+def set_student_photo(
+    db: Session, student: Student, photo_path: str, face_embedding: list[float]
+) -> Student:
+    """Enregistre le chemin de la photo et l'embedding facial calcule."""
+    student.photo_path = photo_path
+    student.face_embedding = face_embedding
+    db.commit()
+    db.refresh(student)
+    return student

@@ -1,14 +1,14 @@
 """Schémas Pydantic pour les étudiants (création, mise à jour, lecture)."""
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class StudentBase(BaseModel):
-    full_name: str
-    student_id: str
+    full_name: str = Field(min_length=1, max_length=255)
+    student_id: str = Field(min_length=1, max_length=50)
     email: EmailStr | None = None
-    department: str | None = None
+    department: str | None = Field(default=None, max_length=150)
 
 
 class StudentCreate(StudentBase):
@@ -22,10 +22,10 @@ class StudentUpdate(BaseModel):
 
     Tous les champs sont optionnels : on ne met à jour que ce qui est fourni.
     """
-    full_name: str | None = None
-    student_id: str | None = None
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    student_id: str | None = Field(default=None, min_length=1, max_length=50)
     email: EmailStr | None = None
-    department: str | None = None
+    department: str | None = Field(default=None, max_length=150)
 
 
 class StudentRead(StudentBase):

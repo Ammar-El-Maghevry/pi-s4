@@ -10,13 +10,18 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
 from app.crud import camera as crud_camera
+from app.models.enums import CameraSourceType
 from app.schemas.camera import (
     CameraCreate,
     CameraRead,
     CameraTestResult,
     CameraUpdate,
 )
-from app.services.camera import test_camera_connection
+from app.services.camera import (
+    close_phone_camera_session,
+    get_phone_camera_status,
+    test_camera_connection,
+)
 
 router = APIRouter(
     prefix="/cameras",
@@ -51,21 +56,36 @@ def get_camera(camera_pk: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{camera_pk}", response_model=CameraRead)
-def update_camera(camera_pk: int, data: CameraUpdate, db: Session = Depends(get_db)):
-    """Modifie la configuration d'une caméra."""
+async def update_camera(camera_pk: int, data: CameraUpdate, db: Session = Depends(get_db)):
+    """
+    Modifie la configuration d'une caméra.
+
+    Route async (le reste du CRUD caméra est synchrone) uniquement pour
+    pouvoir fermer, sur la vraie boucle d'évènements du serveur, la session
+    WebRTC d'un éventuel ancien jeton téléphone — cette fermeture réseau ne
+    peut pas se faire en sécurité depuis un thread de pool synchrone.
+    """
     camera = crud_camera.get_camera(db, camera_pk)
     if camera is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera introuvable")
-    return crud_camera.update_camera(db, camera, data)
+    try:
+        updated, stale_token = crud_camera.update_camera(db, camera, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    if stale_token:
+        await close_phone_camera_session(stale_token)
+    return updated
 
 
 @router.delete("/{camera_pk}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_camera(camera_pk: int, db: Session = Depends(get_db)):
-    """Supprime une caméra."""
+async def delete_camera(camera_pk: int, db: Session = Depends(get_db)):
+    """Supprime une caméra (voir `update_camera` pour la raison d'être async)."""
     camera = crud_camera.get_camera(db, camera_pk)
     if camera is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera introuvable")
-    crud_camera.delete_camera(db, camera)
+    stale_token = crud_camera.delete_camera(db, camera)
+    if stale_token:
+        await close_phone_camera_session(stale_token)
 
 
 @router.post("/{camera_pk}/test-connection", response_model=CameraTestResult)
@@ -80,7 +100,10 @@ def test_connection(camera_pk: int, db: Session = Depends(get_db)):
     if camera is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera introuvable")
 
-    result = test_camera_connection(camera.source_url)
+    if camera.source_type == CameraSourceType.PHONE:
+        result = get_phone_camera_status(camera.webrtc_token)
+    else:
+        result = test_camera_connection(camera.source_url)
     return CameraTestResult(
         success=result.success,
         message=result.message,

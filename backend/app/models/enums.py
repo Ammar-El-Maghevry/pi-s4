@@ -30,3 +30,9 @@ class CrossingDirection(str, enum.Enum):
     """
     TOP_TO_BOTTOM_IS_ENTRY = "top_to_bottom_is_entry"  # haut → bas = entrée
     BOTTOM_TO_TOP_IS_ENTRY = "bottom_to_top_is_entry"  # bas → haut = entrée
+
+
+class CameraSourceType(str, enum.Enum):
+    """Origine du flux vidéo d'une caméra."""
+    IP_CAMERA = "ip_camera"  # flux RTSP/HTTP ou index USB, ouvert via OpenCV
+    PHONE = "phone"          # navigateur d'un telephone, diffuse en direct via WebRTC

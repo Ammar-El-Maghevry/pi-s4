@@ -22,11 +22,13 @@ class Settings(BaseSettings):
     # Durée de validité du jeton d'accès (en minutes).
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8  # 8 heures
 
-    # --- Reconnaissance faciale (préparé pour les phases suivantes) ---
+    # --- Reconnaissance faciale ---
     # Dimension du vecteur d'embedding produit par InsightFace (ArcFace = 512).
     FACE_EMBEDDING_DIM: int = 512
     # Seuil de similarité cosinus au-dessus duquel deux visages sont considérés identiques.
     FACE_MATCH_THRESHOLD: float = 0.5
+    # Repertoire de stockage des photos de reference (monte en volume dans docker).
+    PHOTO_STORAGE_DIR: str = "./photos"
 
     # --- Moteur de calcul de présence (valeurs par défaut du moteur) ---
     # Part minimale de la séance passée en salle pour être compté PRÉSENT.
@@ -43,6 +45,15 @@ class Settings(BaseSettings):
     # --- Général ---
     PROJECT_NAME: str = "Systeme de presence intelligent"
     API_V1_PREFIX: str = "/api/v1"
+
+    # --- CORS ---
+    # Origines autorisees a appeler l'API (liste separee par des virgules dans .env).
+    # Permet de pointer vers le frontend sans modifier le code (docker, autre port...).
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 

@@ -5,8 +5,8 @@ Chaque ligne représente un créneau (séance ou pause) avec son heure de début
 et de fin. Les cinq séances quotidiennes sont insérées au démarrage
 (voir app/initial_data.py).
 """
-from sqlalchemy import Enum, Integer, String, Time
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Enum, ForeignKey, Integer, String, Time
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.enums import SessionType
@@ -24,3 +24,10 @@ class Schedule(Base):
     session_type: Mapped[SessionType] = mapped_column(
         Enum(SessionType), default=SessionType.SESSION, nullable=False
     )
+    # Caméra installée dans la salle où se déroule cette séance (facultatif :
+    # une séance peut ne pas encore avoir de caméra assignée).
+    camera_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cameras.id", ondelete="SET NULL"), nullable=True
+    )
+
+    camera = relationship("Camera")

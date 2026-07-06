@@ -1,0 +1,46 @@
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AppShell } from "./components/AppShell";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import { ToastProvider } from "./context/ToastContext";
+import { AttendancePage } from "./pages/AttendancePage";
+import { CamerasPage } from "./pages/CamerasPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { LoginPage } from "./pages/LoginPage";
+import { PeoplePage } from "./pages/PeoplePage";
+import { PhoneCameraPage } from "./pages/PhoneCameraPage";
+import { ReportsPage } from "./pages/ReportsPage";
+import { SchedulesPage } from "./pages/SchedulesPage";
+
+function App() {
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/phone-camera/:token" element={<PhoneCameraPage />} />
+
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppShell />}>
+                  <Route element={<ProtectedRoute allow={["admin"]} fallback="/reports" />}>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/people" element={<PeoplePage />} />
+                    <Route path="/schedules" element={<SchedulesPage />} />
+                    <Route path="/cameras" element={<CamerasPage />} />
+                    <Route path="/attendance" element={<AttendancePage />} />
+                  </Route>
+                  <Route path="/reports" element={<ReportsPage />} />
+                </Route>
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ToastProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;
