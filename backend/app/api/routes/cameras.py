@@ -8,6 +8,7 @@ par l'authentification administrateur (`get_current_user`).
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.deps import get_current_user, get_db
 from app.crud import camera as crud_camera
 from app.models.enums import CameraSourceType
@@ -16,12 +17,14 @@ from app.schemas.camera import (
     CameraRead,
     CameraTestResult,
     CameraUpdate,
+    EmailSendResult,
 )
 from app.services.camera import (
     close_phone_camera_session,
     get_phone_camera_status,
     test_camera_connection,
 )
+from app.services.email import send_pairing_email
 
 router = APIRouter(
     prefix="/cameras",
@@ -110,3 +113,30 @@ def test_connection(camera_pk: int, db: Session = Depends(get_db)):
         width=result.width,
         height=result.height,
     )
+
+
+@router.post("/{camera_pk}/send-pairing-email", response_model=EmailSendResult)
+def send_camera_pairing_email(camera_pk: int, db: Session = Depends(get_db)):
+    """Envoie (ou renvoie) le lien d'appairage d'une caméra téléphone par e-mail."""
+    camera = crud_camera.get_camera(db, camera_pk)
+    if camera is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera introuvable")
+    if camera.source_type != CameraSourceType.PHONE or not camera.webrtc_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cette camera n'est pas une camera telephone appairee",
+        )
+    if not camera.pairing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aucun email configure pour cette camera",
+        )
+
+    link = f"{settings.PHONE_PAIRING_BASE_URL}/phone-camera/{camera.webrtc_token}"
+    try:
+        send_pairing_email(camera.pairing_email, camera.name, link)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Envoi de l'email echoue : {exc}"
+        ) from exc
+    return EmailSendResult(success=True, message=f"Email envoye a {camera.pairing_email}")

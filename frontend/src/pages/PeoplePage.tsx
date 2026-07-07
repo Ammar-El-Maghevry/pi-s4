@@ -9,12 +9,19 @@ import {
 import { createTeacher, deleteTeacher, listTeachers } from "../api/teachers";
 import { Modal } from "../components/Modal";
 import { PhotoCaptureModal } from "../components/PhotoCaptureModal";
+import { PhotoPicker } from "../components/PhotoPicker";
 import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import type { Student, Teacher } from "../lib/types";
 
 type Tab = "students" | "teachers";
+
+// Teacher photos are base64-encoded straight into localStorage (no backend
+// model yet — see api/teachers.ts), which is shared with everything else the
+// app stores there and typically capped around 5-10MB per origin. Cap well
+// below that so a few teacher photos can't starve auth/schedule storage.
+const MAX_TEACHER_PHOTO_BYTES = 1.5 * 1024 * 1024;
 
 export function PeoplePage() {
   const { showError, showSuccess } = useToast();
@@ -190,6 +197,7 @@ export function PeoplePage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
+                <th className="px-5 py-3 font-medium">Photo</th>
                 <th className="px-5 py-3 font-medium">Name</th>
                 <th className="px-5 py-3 font-medium">Teacher ID</th>
                 <th className="px-5 py-3 font-medium">Email</th>
@@ -199,12 +207,25 @@ export function PeoplePage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <TableLoading colSpan={5} />
+                <TableLoading colSpan={6} />
               ) : teachers.length === 0 ? (
-                <TableEmpty colSpan={5} />
+                <TableEmpty colSpan={6} />
               ) : (
                 teachers.map((t) => (
                   <tr key={t.id} className="border-b border-border last:border-0">
+                    <td className="px-5 py-3">
+                      {t.photo_data_url ? (
+                        <img
+                          src={t.photo_data_url}
+                          alt={t.full_name}
+                          className="h-9 w-9 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-border text-text-muted">
+                          <span className="text-xs">+</span>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-5 py-3 font-medium">{t.full_name}</td>
                     <td className="px-5 py-3 font-data text-text-muted">{t.teacher_id}</td>
                     <td className="px-5 py-3 text-text-muted">{t.email ?? "—"}</td>
@@ -297,6 +318,7 @@ function AddPersonModal({
   const [idNumber, setIdNumber] = useState("");
   const [email, setEmail] = useState("");
   const [department, setDepartment] = useState("");
+  const [photo, setPhoto] = useState<Blob | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
@@ -304,19 +326,35 @@ function AddPersonModal({
     setIsSubmitting(true);
     try {
       if (tab === "students") {
-        await createStudent({
+        const student = await createStudent({
           full_name: fullName,
           student_id: idNumber,
           email: email || null,
           department: department || null,
         });
-        showSuccess("Student added");
+        if (photo) {
+          try {
+            await uploadStudentPhoto(student.id, photo);
+            showSuccess("Student added with photo enrolled");
+          } catch (photoErr) {
+            showError(`Student added, but photo upload failed: ${apiErrorMessage(photoErr)}`);
+          }
+        } else {
+          showSuccess("Student added");
+        }
       } else {
+        if (photo && photo.size > MAX_TEACHER_PHOTO_BYTES) {
+          throw new Error(
+            `Photo is too large (max ${MAX_TEACHER_PHOTO_BYTES / (1024 * 1024)}MB) — teacher ` +
+              "photos are stored in this browser only, which has limited space.",
+          );
+        }
         await createTeacher({
           full_name: fullName,
           teacher_id: idNumber,
           email: email || null,
           department: department || null,
+          photo_data_url: photo ? await blobToDataUrl(photo) : null,
         });
         showSuccess("Teacher added");
       }
@@ -340,6 +378,12 @@ function AddPersonModal({
         />
         <Field label="Email" value={email} onChange={setEmail} type="email" />
         <Field label="Department" value={department} onChange={setDepartment} />
+        <div>
+          <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
+            Photo (optional)
+          </label>
+          <PhotoPicker value={photo} onChange={setPhoto} height={200} />
+        </div>
         <button
           type="submit"
           disabled={isSubmitting}
@@ -350,6 +394,15 @@ function AddPersonModal({
       </form>
     </Modal>
   );
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 function Field({

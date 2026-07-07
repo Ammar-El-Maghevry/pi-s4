@@ -7,7 +7,10 @@ const STORAGE_KEY = "presence.teachers";
 
 function read(): Teacher[] {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    const stored: Partial<Teacher>[] = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    // Records created before `photo_data_url` existed have no such key at
+    // all (not even `null`); backfill so the field always matches its type.
+    return stored.map((t) => ({ photo_data_url: null, ...t }) as Teacher);
   } catch {
     return [];
   }

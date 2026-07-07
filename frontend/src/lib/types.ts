@@ -57,6 +57,7 @@ export interface Camera {
   source_type: CameraSourceType;
   source_url: string;
   webrtc_token: string | null;
+  pairing_email: string | null;
   is_active: boolean;
   line_x1: number | null;
   line_y1: number | null;
@@ -77,6 +78,7 @@ export interface CameraCreate {
   location?: string | null;
   source_type?: CameraSourceType;
   source_url?: string;
+  pairing_email?: string | null;
   is_active?: boolean;
 }
 
@@ -87,6 +89,11 @@ export interface CameraTestResult {
   message: string;
   width: number | null;
   height: number | null;
+}
+
+export interface EmailSendResult {
+  success: boolean;
+  message: string;
 }
 
 export interface PhoneCameraInfo {
@@ -174,6 +181,9 @@ export interface Teacher {
   teacher_id: string;
   email: string | null;
   department: string | null;
+  // No backend photo storage for teachers yet, so this is a data: URL stored
+  // directly in localStorage alongside the rest of the record.
+  photo_data_url: string | null;
 }
 
 export type TeacherCreate = Omit<Teacher, "id">;

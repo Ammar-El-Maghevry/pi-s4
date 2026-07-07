@@ -3,6 +3,7 @@ import {
   createCamera,
   deleteCamera,
   listCameras,
+  sendPairingEmail,
   testCameraConnection,
   updateCamera,
 } from "../api/cameras";
@@ -12,8 +13,13 @@ import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { CameraSourceType, type Camera, type CameraCreate } from "../lib/types";
 
+// Always HTTPS on a fixed port, regardless of the scheme/port the admin is
+// currently browsing from: phone browsers only expose camera access on a
+// secure context, so the pairing link can't just reuse window.location.origin
+// (the admin dashboard itself is commonly viewed over plain LAN HTTP).
 function pairingLink(token: string): string {
-  return `${window.location.origin}/phone-camera/${token}`;
+  const httpsPort = import.meta.env.VITE_PHONE_PAIRING_HTTPS_PORT ?? "8443";
+  return `https://${window.location.hostname}:${httpsPort}/phone-camera/${token}`;
 }
 
 async function copyPairingLink(
@@ -36,6 +42,7 @@ export function CamerasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<Camera | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
+  const [sendingEmailId, setSendingEmailId] = useState<number | null>(null);
 
   async function load() {
     setIsLoading(true);
@@ -82,6 +89,18 @@ export function CamerasPage() {
       showError(apiErrorMessage(err));
     } finally {
       setTestingId(null);
+    }
+  }
+
+  async function handleSendEmail(id: number) {
+    setSendingEmailId(id);
+    try {
+      const result = await sendPairingEmail(id);
+      showSuccess(result.message);
+    } catch (err) {
+      showError(apiErrorMessage(err));
+    } finally {
+      setSendingEmailId(null);
     }
   }
 
@@ -156,6 +175,15 @@ export function CamerasPage() {
                           Copy link
                         </button>
                       )}
+                      {c.source_type === CameraSourceType.PHONE && c.pairing_email && (
+                        <button
+                          onClick={() => handleSendEmail(c.id)}
+                          disabled={sendingEmailId === c.id}
+                          className="text-xs text-text-muted hover:text-accent disabled:opacity-50"
+                        >
+                          {sendingEmailId === c.id ? "Sending…" : "Send email"}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleTest(c.id)}
                         disabled={testingId === c.id}
@@ -217,19 +245,35 @@ function CameraModal({
     location: camera?.location ?? "",
     source_type: camera?.source_type ?? CameraSourceType.IP_CAMERA,
     source_url: camera?.source_type === CameraSourceType.PHONE ? "" : (camera?.source_url ?? ""),
+    pairing_email: camera?.pairing_email ?? "",
     is_active: camera?.is_active ?? true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [savedPhoneToken, setSavedPhoneToken] = useState<string | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [savedCamera, setSavedCamera] = useState<{
+    id: number;
+    name: string;
+    webrtc_token: string;
+    pairing_email: string | null;
+  } | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const payload = { ...form, location: form.location || null };
+      const payload = {
+        ...form,
+        location: form.location || null,
+        pairing_email: form.pairing_email || null,
+      };
       const saved = camera ? await updateCamera(camera.id, payload) : await createCamera(payload);
       if (saved.source_type === CameraSourceType.PHONE && saved.webrtc_token) {
-        setSavedPhoneToken(saved.webrtc_token);
+        setSavedCamera({
+          id: saved.id,
+          name: saved.name,
+          webrtc_token: saved.webrtc_token,
+          pairing_email: saved.pairing_email,
+        });
         return;
       }
       onSaved();
@@ -240,30 +284,53 @@ function CameraModal({
     }
   }
 
+  async function handleSendEmailNow() {
+    if (!savedCamera) return;
+    setIsSendingEmail(true);
+    try {
+      const result = await sendPairingEmail(savedCamera.id);
+      showSuccess(result.message);
+    } catch (err) {
+      showError(apiErrorMessage(err));
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }
+
   function set<K extends keyof CameraCreate>(key: K, value: CameraCreate[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  if (savedPhoneToken) {
+  if (savedCamera) {
     return (
       <Modal title="Phone camera saved" onClose={onSaved}>
         <div className="flex flex-col gap-3">
           <p className="text-sm text-text-muted">
             Open this link on the phone's own browser to start streaming its camera as{" "}
-            <span className="font-medium text-text">{form.name}</span>.
+            <span className="font-medium text-text">{savedCamera.name}</span>.
           </p>
           <div className="flex items-center gap-2 rounded-lg border border-border bg-bg-inset px-3 py-2 text-xs font-data">
-            <span className="flex-1 truncate">{pairingLink(savedPhoneToken)}</span>
+            <span className="flex-1 truncate">{pairingLink(savedCamera.webrtc_token)}</span>
             <button
-              onClick={() => copyPairingLink(savedPhoneToken, { showSuccess, showError })}
+              onClick={() => copyPairingLink(savedCamera.webrtc_token, { showSuccess, showError })}
               className="shrink-0 text-accent hover:opacity-80"
             >
               Copy
             </button>
           </div>
+          {savedCamera.pairing_email && (
+            <button
+              onClick={handleSendEmailNow}
+              disabled={isSendingEmail}
+              className="self-start rounded-lg border border-border px-3 py-1.5 text-sm text-text-muted hover:text-text disabled:opacity-50"
+            >
+              {isSendingEmail ? "Sending…" : `Email this link to ${savedCamera.pairing_email}`}
+            </button>
+          )}
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
-            Camera access requires HTTPS (or opening the link as "localhost") in most mobile
-            browsers — a plain http:// link over WiFi may be blocked by the phone.
+            This link uses a self-signed certificate, so the phone's browser will show a "not
+            secure" / certificate warning the first time — tap "Advanced" then "Proceed" to
+            continue. That's expected and only needs doing once per phone.
           </div>
           <button
             onClick={onSaved}
@@ -320,10 +387,18 @@ function CameraModal({
             required
           />
         ) : (
-          <p className="rounded-lg border border-border bg-bg-inset px-3 py-2 text-xs text-text-muted">
-            A pairing link will be generated after saving — open it on the phone's own browser to
-            start streaming its camera.
-          </p>
+          <>
+            <p className="rounded-lg border border-border bg-bg-inset px-3 py-2 text-xs text-text-muted">
+              A pairing link will be generated after saving — open it on the phone's own browser
+              to start streaming its camera.
+            </p>
+            <Field
+              label="Pairing email (optional)"
+              value={form.pairing_email ?? ""}
+              onChange={(v) => set("pairing_email", v)}
+              type="email"
+            />
+          </>
         )}
         <label className="flex items-center gap-2 text-sm text-text-muted">
           <input

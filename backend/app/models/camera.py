@@ -39,6 +39,8 @@ class Camera(Base):
     source_url: Mapped[str] = mapped_column(String(512), nullable=False)
     # Jeton d'appairage unique du lien /phone-camera/<token> (caméras téléphone uniquement).
     webrtc_token: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    # Adresse à laquelle envoyer (sur demande) le lien d'appairage par e-mail.
+    pairing_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # --- Ligne de franchissement virtuelle (coordonnées en pixels) ---

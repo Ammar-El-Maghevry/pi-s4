@@ -24,6 +24,15 @@ services:
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       CORS_ORIGINS: http://localhost:8080
       PHOTO_STORAGE_DIR: /app/photos
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@presence.sys}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      # Origin the /phone-camera/<token> link in emails points to (the
+      # frontend's HTTPS port — see TLS_SAN_IP on the frontend service).
+      PHONE_PAIRING_BASE_URL: https://${TLS_SAN_IP:-127.0.0.1}:8443
     volumes:
       - photos:/app/photos
     ports:
@@ -33,8 +42,14 @@ services:
     build: ./frontend
     depends_on:
       - backend
+    environment:
+      # LAN IP phones use to reach this machine; baked into the self-signed
+      # TLS cert's SAN so phone browsers accept the HTTPS pairing link.
+      # Update if this machine's LAN IP changes.
+      TLS_SAN_IP: ${TLS_SAN_IP:-127.0.0.1}
     ports:
       - "8080:80"
+      - "8443:443"
 
 volumes:
   pgdata:

@@ -1,5 +1,11 @@
 import { api } from "../lib/api";
-import type { Camera, CameraCreate, CameraTestResult, CameraUpdate } from "../lib/types";
+import type {
+  Camera,
+  CameraCreate,
+  CameraTestResult,
+  CameraUpdate,
+  EmailSendResult,
+} from "../lib/types";
 
 export async function listCameras(): Promise<Camera[]> {
   const { data } = await api.get<Camera[]>("/cameras", { params: { limit: 500 } });
@@ -22,5 +28,10 @@ export async function deleteCamera(id: number): Promise<void> {
 
 export async function testCameraConnection(id: number): Promise<CameraTestResult> {
   const { data } = await api.post<CameraTestResult>(`/cameras/${id}/test-connection`);
+  return data;
+}
+
+export async function sendPairingEmail(id: number): Promise<EmailSendResult> {
+  const { data } = await api.post<EmailSendResult>(`/cameras/${id}/send-pairing-email`);
   return data;
 }

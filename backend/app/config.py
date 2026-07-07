@@ -55,6 +55,18 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
+    # --- Envoi d'e-mails (lien d'appairage d'une camera telephone) ---
+    # SMTP_HOST vide = envoi desactive (dev local sans boite mail configuree).
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "no-reply@presence.sys"
+    SMTP_USE_TLS: bool = True
+    # Origine (schema+hote+port) a partir de laquelle construire le lien
+    # /phone-camera/<token> envoye par email (le port HTTPS du frontend).
+    PHONE_PAIRING_BASE_URL: str = "https://localhost:8443"
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
 

@@ -9,7 +9,7 @@ usage interne par le futur service caméra.
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.models.enums import CameraSourceType, CrossingDirection
 
@@ -41,6 +41,8 @@ class CameraBase(BaseModel):
     # Obligatoire uniquement pour une caméra IP (voir `_check_source_url` ci-dessous) ;
     # ignoré/ecrase par le CRUD pour une caméra téléphone.
     source_url: str | None = Field(default=None, max_length=512)
+    # Adresse a laquelle envoyer (sur demande) le lien d'appairage par e-mail.
+    pairing_email: EmailStr | None = None
     is_active: bool = True
 
     line_x1: int | None = None
@@ -88,6 +90,7 @@ class CameraUpdate(BaseModel):
     location: str | None = None
     source_type: CameraSourceType | None = None
     source_url: str | None = None
+    pairing_email: EmailStr | None = None
     is_active: bool | None = None
 
     line_x1: int | None = None
@@ -126,6 +129,7 @@ class CameraRead(BaseModel):
     # Jeton d'appairage du lien /phone-camera/<token> (caméras téléphone uniquement) ;
     # non masqué, ce n'est pas un identifiant de connexion et seuls les admins le voient.
     webrtc_token: str | None = None
+    pairing_email: str | None = None
     is_active: bool
 
     line_x1: int | None = None
@@ -185,3 +189,9 @@ class WebRTCAnswer(BaseModel):
     """Réponse SDP renvoyée par le serveur."""
     sdp: str
     type: str
+
+
+class EmailSendResult(BaseModel):
+    """Résultat de l'envoi du lien d'appairage par e-mail."""
+    success: bool
+    message: str
