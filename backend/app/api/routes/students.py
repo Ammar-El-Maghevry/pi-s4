@@ -5,6 +5,7 @@ Toutes ces routes sont protégées : seul un administrateur authentifié y accè
 (dépendance `get_current_user`).
 """
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
