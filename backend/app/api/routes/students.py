@@ -119,7 +119,7 @@ async def upload_student_photo(
         )
 
     try:
-        detected = extract_single_face_embedding(content)
+        detected = await run_in_threadpool(extract_single_face_embedding, content)
     except NoFaceDetected as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except MultipleFacesDetected as exc:
