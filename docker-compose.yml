@@ -35,6 +35,7 @@ services:
       PHONE_PAIRING_BASE_URL: https://${TLS_SAN_IP:-127.0.0.1}:8443
     volumes:
       - photos:/app/photos
+      - insightface_models:/root/.insightface
     ports:
       - "8000:8000"
 
