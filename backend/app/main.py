@@ -52,6 +52,22 @@ def start_phone_camera_reaper() -> None:
     _start()
 
 
+@app.on_event("startup")
+def warm_up_face_model() -> None:
+    """
+    Charge le modèle InsightFace dans un thread d'arrière-plan.
+
+    Le premier chargement télécharge ~326 Mo de poids : sans ce warm-up, ce
+    téléchargement se déclenchait lors du premier upload de photo, bloquant
+    tout le processus (un seul worker uvicorn) pendant plusieurs minutes.
+    """
+    import threading
+
+    from app.services.ai.face_embedding import _get_model
+
+    threading.Thread(target=_get_model, daemon=True).start()
+
+
 @app.on_event("shutdown")
 async def close_phone_camera_sessions() -> None:
     """Ferme proprement les sessions WebRTC de téléphone actives à l'arrêt."""
