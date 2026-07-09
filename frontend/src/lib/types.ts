@@ -17,6 +17,9 @@ export interface Student {
   student_id: string;
   email: string | null;
   department: string | null;
+  // Auto-assigned server-side from `department`, batched every 40 students
+  // (e.g. "Computer Science 1") — not directly settable.
+  class_name: string | null;
   photo_path: string | null;
   has_face_embedding: boolean;
   created_at: string;

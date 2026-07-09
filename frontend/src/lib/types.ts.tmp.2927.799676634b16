@@ -125,6 +125,9 @@ export interface Schedule {
   session_type: SessionType;
   camera_id: number | null;
   camera: Camera | null;
+  // Class assigned to this session (must match a Student.class_name) — only
+  // those students count toward its roster and are recognized live.
+  class_name: string | null;
 }
 
 export const EventType = {
