@@ -4,6 +4,12 @@
 import type { Teacher, TeacherCreate } from "../lib/types";
 
 const STORAGE_KEY = "presence.teachers";
+// No backend attendance tracking for teachers yet (mirrors the student
+// system's limitation: there's no live face-recognition pipeline for anyone
+// yet), so presence is a manual per-day toggle stored client-side, keyed by
+// ISO date then teacher id. Absent unless explicitly marked present, same
+// default as the student attendance engine.
+const ATTENDANCE_KEY = "presence.teacher_attendance";
 
 function read(): Teacher[] {
   try {
