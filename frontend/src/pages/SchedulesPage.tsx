@@ -3,6 +3,7 @@ import { listCameras } from "../api/cameras";
 import {
   assignScheduleCamera,
   createClassPlan,
+  deleteClassPlan,
   listClassPlans,
   type ClassPlanInput,
 } from "../api/schedules";
