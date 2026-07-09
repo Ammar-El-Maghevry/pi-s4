@@ -71,19 +71,11 @@ export async function listClassPlans(): Promise<ScheduleWithExtras[]> {
 }
 
 export async function createClassPlan(input: ClassPlanInput): Promise<ScheduleWithExtras> {
-  const localSchedules = readLocalSchedules();
-  const nextId = -(localSchedules.length + 1);
-  const schedule: Schedule = {
-    id: nextId,
-    session_number: 0,
+  const { data: schedule } = await api.post<Schedule>("/schedules", {
     name: input.name,
     start_time: input.start_time,
     end_time: input.end_time,
-    session_type: SessionType.SESSION,
-    camera_id: null,
-    camera: null,
-  };
-  writeLocalSchedules([...localSchedules, schedule]);
+  });
 
   const extras = readExtras();
   const scheduleExtras: ScheduleExtras = {
@@ -93,10 +85,10 @@ export async function createClassPlan(input: ClassPlanInput): Promise<ScheduleWi
     check_in_offset_minutes: input.check_in_offset_minutes,
     check_out_offset_minutes: input.check_out_offset_minutes,
   };
-  extras[nextId] = scheduleExtras;
+  extras[schedule.id] = scheduleExtras;
   writeExtras(extras);
 
-  return { ...schedule, ...scheduleExtras, isLocalOnly: true };
+  return { ...schedule, ...scheduleExtras, isLocalOnly: false };
 }
 
 export async function assignScheduleCamera(
