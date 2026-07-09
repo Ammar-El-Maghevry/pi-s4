@@ -1,9 +1,9 @@
-// Real schedule rows come from the backend (read-only: session_number, name,
-// start_time, end_time, session_type). The backend has no `teacher`/`room`/
-// `day`/check-in/check-out-offset fields and no create endpoint yet (see
-// frontend/README.md), so those are layered on top client-side, in
-// localStorage, keyed by schedule id. New "class plans" created from the UI
-// are stored fully client-side with a negative local id.
+// The backend has no `teacher`/`room`/`day`/check-in/check-out-offset columns
+// (see frontend/README.md), so those are layered on top client-side, in
+// localStorage, keyed by schedule id, for every schedule (backend-created or
+// not). `POST /schedules` now exists, so new "class plans" are real backend
+// rows (and can have a camera assigned) — `readLocalSchedules` only remains
+// to surface any pre-existing plans created before this endpoint existed.
 import { api } from "../lib/api";
 import type { Schedule, ScheduleExtras, ScheduleWithExtras } from "../lib/types";
 import { SessionType } from "../lib/types";
