@@ -250,6 +250,7 @@ function CameraModal({
     name: string;
     webrtc_token: string;
     pairing_email: string | null;
+    pairing_link: string;
   } | null>(null);
 
   async function handleSubmit(e: FormEvent) {
