@@ -5,9 +5,8 @@ Diagramme fidèle au code réel : modèles ORM (`backend/app/models/*`), énumé
 (`app/crud/*`) et services métier (`app/services/*`). Chaque attribut / signature a
 été vérifié par rapport à son fichier source. Visibilité `+` = public.
 
-Les classes marquées `<<future>>` correspondent au **service IA non implémenté**
-(caméra unique + ligne de franchissement) décrit dans
-`app/services/ai/README.md`.
+Les classes marquées `<<future>>` correspondent aux composants non implémentés
+(anti-spoofing, ligne de franchissement temps réel, suivi ByteTrack).
 
 ```mermaid
 classDiagram
@@ -30,16 +29,15 @@ classDiagram
         LATE
         ABSENT
     }
-    class ReportPeriod {
-        <<enumeration>>
-        DAILY
-        WEEKLY
-        MONTHLY
-    }
     class CrossingDirection {
         <<enumeration>>
         TOP_TO_BOTTOM_IS_ENTRY
         BOTTOM_TO_TOP_IS_ENTRY
+    }
+    class CameraSourceType {
+        <<enumeration>>
+        IP_CAMERA
+        PHONE
     }
 
     %% ======================= Modèles ORM =======================
@@ -72,6 +70,30 @@ classDiagram
         +Time start_time
         +Time end_time
         +SessionType session_type
+        +Optional~int~ camera_id
+    }
+    class Camera {
+        <<table cameras>>
+        +int id
+        +str name
+        +Optional~str~ location
+        +CameraSourceType source_type
+        +str source_url
+        +Optional~str~ webrtc_token
+        +Optional~str~ pairing_email
+        +bool is_active
+        +Optional~int~ line_x1
+        +Optional~int~ line_y1
+        +Optional~int~ line_x2
+        +Optional~int~ line_y2
+        +CrossingDirection crossing_direction
+        +int min_crossing_frames
+        +int cooldown_seconds
+        +float present_threshold
+        +float late_threshold
+        +float face_match_threshold
+        +datetime created_at
+        +datetime updated_at
     }
     class AttendanceEvent {
         <<table attendance_events>>
@@ -102,26 +124,6 @@ classDiagram
         +str image_path
         +EventType event_type
         +datetime captured_at
-    }
-    class Camera {
-        <<table cameras>>
-        +int id
-        +str name
-        +Optional~str~ location
-        +str source_url
-        +bool is_active
-        +Optional~int~ line_x1
-        +Optional~int~ line_y1
-        +Optional~int~ line_x2
-        +Optional~int~ line_y2
-        +CrossingDirection crossing_direction
-        +int min_crossing_frames
-        +int cooldown_seconds
-        +float present_threshold
-        +float late_threshold
-        +float face_match_threshold
-        +datetime created_at
-        +datetime updated_at
     }
 
     %% ======================= Schémas Pydantic =======================
@@ -170,6 +172,16 @@ classDiagram
         +datetime created_at
         +datetime updated_at
     }
+    class ScheduleCreate {
+        <<schema>>
+        +str name
+        +Time start_time
+        +Time end_time
+    }
+    class ScheduleUpdate {
+        <<schema>>
+        +Optional~int~ camera_id
+    }
     class ScheduleRead {
         <<schema>>
         +int id
@@ -178,6 +190,8 @@ classDiagram
         +Time start_time
         +Time end_time
         +SessionType session_type
+        +Optional~int~ camera_id
+        +Optional~CameraRead~ camera
     }
     class AttendanceEventCreate {
         <<schema>>
@@ -234,8 +248,10 @@ classDiagram
     class CameraCreate {
         <<schema>>
         +str name
-        +str source_url
         +Optional~str~ location
+        +CameraSourceType source_type
+        +Optional~str~ source_url
+        +Optional~EmailStr~ pairing_email
         +bool is_active
         +Optional~int~ line_x1..line_y2
         +CrossingDirection crossing_direction
@@ -248,8 +264,10 @@ classDiagram
     class CameraUpdate {
         <<schema>>
         +Optional~str~ name
-        +Optional~str~ source_url
         +Optional~str~ location
+        +Optional~CameraSourceType~ source_type
+        +Optional~str~ source_url
+        +Optional~EmailStr~ pairing_email
         +Optional~bool~ is_active
         +Optional~int~ line_x1..line_y2
         +Optional~CrossingDirection~ crossing_direction
@@ -264,7 +282,11 @@ classDiagram
         +int id
         +str name
         +Optional~str~ location
+        +CameraSourceType source_type
         +str source_url_masquee
+        +Optional~str~ webrtc_token
+        +Optional~str~ pairing_email
+        +Optional~str~ pairing_link
         +bool is_active
         +Optional~int~ line_x1..line_y2
         +CrossingDirection crossing_direction
@@ -283,6 +305,27 @@ classDiagram
         +Optional~int~ width
         +Optional~int~ height
     }
+    class PhoneCameraInfo {
+        <<schema>>
+        +str name
+        +Optional~str~ location
+        +bool is_active
+    }
+    class WebRTCOffer {
+        <<schema>>
+        +str sdp
+        +str type
+    }
+    class WebRTCAnswer {
+        <<schema>>
+        +str sdp
+        +str type
+    }
+    class EmailSendResult {
+        <<schema>>
+        +bool success
+        +str message
+    }
 
     %% ======================= Couche CRUD =======================
     class CRUD_User {
@@ -299,11 +342,16 @@ classDiagram
         +create_student(db, data) Student
         +update_student(db, student, data) Student
         +delete_student(db, student) None
+        +set_student_photo(db, student, image_data) Student
+        +list_face_candidates(db) list~tuple~
     }
     class CRUD_Schedule {
         <<crud schedule>>
         +list_schedules(db) list~Schedule~
-        +get_schedule(db, schedule_pk) Schedule
+        +create_schedule(db, data) Schedule
+        +get_schedule(db, pk) Schedule
+        +update_schedule(db, schedule, data) Schedule
+        +delete_schedule(db, schedule) None
     }
     class CRUD_AttendanceEvent {
         <<crud attendance_event>>
@@ -326,17 +374,26 @@ classDiagram
     class CRUD_Camera {
         <<crud camera>>
         +get_camera(db, pk) Camera
+        +get_camera_by_token(db, token) Camera
         +list_cameras(db, skip, limit) list~Camera~
         +create_camera(db, data) Camera
         +update_camera(db, camera, data) Camera
         +delete_camera(db, camera) None
     }
-    class CameraConnectionService {
-        <<service camera>>
-        +test_camera_connection(source_url, timeout_ms) ConnectionResult
-    }
 
     %% ======================= Services métier =======================
+    class PhotoService {
+        <<service photos>>
+        +save_student_photo(student_id, image_data) str
+        +get_student_photo_path(student_id) str
+        +delete_student_photo(student_id) None
+        -_validate_content_type(data) None
+        -_sanitize_filename(name) str
+    }
+    class EmailService {
+        <<service email>>
+        +send_pairing_email(to_email, pairing_link) bool
+    }
     class Interval {
         <<service attendance>>
         +datetime start
@@ -364,6 +421,26 @@ classDiagram
         +compute_student_date(db, student_id, on_date) int
         +compute_date(db, on_date, student_id) ComputeReport
     }
+    class LiveRecognition {
+        <<service attendance>>
+        +start() None
+        +stop() None
+        -_tick() None
+        -_process_camera(db, camera, now) None
+        -_active_session(db, camera_id, now) Schedule
+    }
+    class CameraConnectionService {
+        <<service camera>>
+        +test_camera_connection(source_url, timeout_ms) ConnectionResult
+    }
+    class WebRTCSessionManager {
+        <<service camera>>
+        +handle_offer(token, sdp, type) tuple~str, str~
+        +get_latest_frame_bgr(token) ndarray
+        +get_status(token) ConnectionResult
+        +close_session(token) None
+        +shutdown_all() None
+    }
     class StudentReportRow {
         <<service reports>>
         +int student_id
@@ -372,7 +449,6 @@ classDiagram
         +int present
         +int late
         +int absent
-        +int total
         +float attendance_rate
     }
     class Report {
@@ -391,12 +467,15 @@ classDiagram
         +to_excel(report) bytes
         +to_pdf(report) bytes
     }
-
-    %% ============ Service IA prévu (caméra unique) — non implémenté ============
-    class FaceDetector {
-        <<future>>
-        +detect(frame) list~FaceBox~
+    class FaceEmbeddingService {
+        <<service ai>>
+        +extract_single_face_embedding(image_bytes) list~float~
+        +extract_all_face_embeddings(frame) list~FaceEmbedding~
+        +cosine_similarity(a, b) float
+        +match_student(embedding, candidates, threshold) tuple
     }
+
+    %% ============ Composants futurs (non implémentés) ============
     class Tracker {
         <<future>>
         +update(detections) list~Track~
@@ -405,12 +484,7 @@ classDiagram
         <<future>>
         +is_live(face_image) bool
     }
-    class FaceRecognizer {
-        <<future>>
-        +embed(face_image) list~float~
-        +identify(embedding) StudentMatch
-    }
-    class LineCrossingDirection {
+    class LineCrossingAnalyzer {
         <<future>>
         +update(track_id, center_xy, at) AttendanceEvent
     }
@@ -418,8 +492,9 @@ classDiagram
     %% ======================= Relations entre entités =======================
     Student "1" -- "*" AttendanceEvent : génère
     Student "1" -- "*" AttendanceResult : concerne
-    Schedule "1" -- "*" AttendanceResult : évalue
     Student "1" -- "*" Snapshot : capture
+    Schedule "1" -- "*" AttendanceResult : évalue
+    Schedule "*" -- "0..1" Camera : assignée à
     AttendanceEvent "*" -- "0..1" Snapshot : associé à
     %% Lien logique (pas une FK) : attendance_events.camera_id est une chaîne.
     Camera "1" ..> "*" AttendanceEvent : identifie (via camera_id)
@@ -429,19 +504,25 @@ classDiagram
     AttendanceEvent ..> EventType : utilise
     AttendanceResult ..> AttendanceStatus : utilise
     Snapshot ..> EventType : utilise
-    Report ..> ReportPeriod : utilise
     Camera ..> CrossingDirection : utilise
+    Camera ..> CameraSourceType : utilise
 
-    %% ======================= Schémas / CRUD -> modèles =======================
+    %% ======================= Schémas -> modèles =======================
     UserCreate ..> User : crée
     UserRead ..> User : projette
     StudentCreate ..> Student : crée
     StudentUpdate ..> Student : met à jour
     StudentRead ..> Student : projette
+    ScheduleCreate ..> Schedule : crée
+    ScheduleUpdate ..> Schedule : met à jour
     ScheduleRead ..> Schedule : projette
+    ScheduleRead ..> CameraRead : intègre
     AttendanceEventCreate ..> AttendanceEvent : crée
     AttendanceEventRead ..> AttendanceEvent : projette
     AttendanceResultRead ..> AttendanceResult : projette
+    CameraCreate ..> Camera : crée
+    CameraUpdate ..> Camera : met à jour
+    CameraRead ..> Camera : projette (source_url masquée)
     CRUD_User ..> User : gère
     CRUD_User ..> Token : émet (via JWT)
     CRUD_Student ..> Student : gère
@@ -449,12 +530,13 @@ classDiagram
     CRUD_AttendanceEvent ..> AttendanceEvent : gère
     CRUD_AttendanceResult ..> AttendanceResult : gère
     CRUD_Dashboard ..> DashboardSummary : alimente
-    CameraCreate ..> Camera : crée
-    CameraUpdate ..> Camera : met à jour
-    CameraRead ..> Camera : projette (source_url masquée)
     CRUD_Camera ..> Camera : gère
     CameraConnectionService ..> Camera : teste le flux
     CameraConnectionService ..> CameraTestResult : produit
+    WebRTCSessionManager ..> PhoneCameraInfo : expose
+    WebRTCSessionManager ..> WebRTCOffer : reçoit
+    WebRTCSessionManager ..> WebRTCAnswer : produit
+    EmailService ..> EmailSendResult : produit
 
     %% ======================= Dépendances des services =======================
     AttendanceEngine ..> Interval : construit
@@ -463,29 +545,42 @@ classDiagram
     AttendanceEngine ..> CRUD_AttendanceEvent : lit
     AttendanceEngine ..> CRUD_AttendanceResult : écrit
     AttendanceEngine ..> CRUD_Schedule : lit
+    LiveRecognition ..> FaceEmbeddingService : détecte
+    LiveRecognition ..> WebRTCSessionManager : lit frame
+    LiveRecognition ..> CRUD_Student : candidats
+    LiveRecognition ..> CRUD_AttendanceEvent : écrit
+    LiveRecognition ..> AttendanceEngine : déclenche
+    LiveRecognition ..> CRUD_Camera : liste
+    LiveRecognition ..> CRUD_Schedule : séance active
     ReportsService ..> Report : produit
     Report ..> StudentReportRow : contient
+    PhotoService ..> Student : sauvegarde
+    FaceEmbeddingService ..> Student : embedding
 
-    %% ============ Chaîne du service IA prévu (producteur d'événements) ============
-    FaceDetector ..> Tracker : alimente
-    Tracker ..> SpoofDetector : alimente
-    SpoofDetector ..> FaceRecognizer : alimente
-    FaceRecognizer ..> LineCrossingDirection : alimente
-    LineCrossingDirection ..> Camera : lit la config (ligne, sens, seuils)
-    LineCrossingDirection ..> AttendanceEvent : émet
+    %% ============ Chaîne des composants futurs ============
+    FaceEmbeddingService ..> Tracker : alimenterait
+    Tracker ..> SpoofDetector : alimenterait
+    SpoofDetector ..> FaceEmbeddingService : reconnaîtrait
+    FaceEmbeddingService ..> LineCrossingAnalyzer : alimenterait
+    LineCrossingAnalyzer ..> Camera : lit la config (ligne, sens, seuils)
+    LineCrossingAnalyzer ..> AttendanceEvent : émettrait
 ```
 
 > **Notes de fidélité**
 > - `Optional~type~` représente les types optionnels (`str | None`, etc.) du code ;
 >   `Vector512` correspond à `Vector(512)` (pgvector).
-> - `AttendanceEngine` et `ReportsService` regroupent, pour la lisibilité, des
->   **fonctions de module** (pas des classes réelles) définies dans
->   `app/services/attendance/*` et `app/services/reports/*`.
-> - Les tables `attendance_events`, `attendance_results`, `cameras` et `snapshots`
->   disposent désormais d'une couche CRUD/schéma (sauf `Snapshot`, écrit par le
->   futur service IA). `User` et `Student` conservent leur CRUD complet.
-> - `CameraRead` masque toujours les identifiants du `source_url` (jamais renvoyés
->   en clair) ; la valeur complète reste en base pour le service caméra.
-> - Les classes `<<future>>` décrivent le **service IA caméra unique** (ligne de
->   franchissement) prévu mais **non implémenté** ; il n'y a plus de composant de
->   corrélation multi-caméras.
+> - `AttendanceEngine`, `LiveRecognition`, `ReportsService`, `PhotoService`,
+>   `EmailService`, `FaceEmbeddingService`, `CameraConnectionService`,
+>   `WebRTCSessionManager` sont des **regroupements logiques** de fonctions de
+>   module (pas des classes réelles), représentés ainsi pour la lisibilité du
+>   diagramme.
+> - Les classes `<<future>>` décrivent les composants **non encore implémentés** :
+>   suivi ByteTrack, anti-spoofing MiniFASNet, et analyse de ligne de
+>   franchissement en temps réel. L'implémentation actuelle contourne ces
+>   composants avec `LiveRecognition` (détection + matching direct sur
+>   visages, sans suivi ni ligne).
+> - La table `schedules` a désormais une FK `camera_id` vers `cameras`.
+> - `CameraRead` calcule `pairing_link` côté serveur à partir de
+>   `PHONE_PAIRING_BASE_URL`.
+> - `ReportPeriod` n'est pas une énumération de la base de données mais une
+>   Enum Python du service de rapports (daily/weekly/monthly).
