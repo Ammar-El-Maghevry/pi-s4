@@ -103,6 +103,7 @@ async def _consume_track(token: str, track) -> None:
                 return
             session.last_frame_size = (frame.width, frame.height)
             session.last_frame_at = datetime.now(timezone.utc)
+            session.last_av_frame = frame
     except (MediaStreamError, asyncio.CancelledError):
         return
 
@@ -154,6 +155,22 @@ async def stop_reaper() -> None:
         with suppress(asyncio.CancelledError):
             await _reaper_task
         _reaper_task = None
+
+
+def get_latest_frame_bgr(token: str):
+    """
+    Décode la dernière frame reçue de ce téléphone en tableau OpenCV (BGR).
+
+    Renvoie `None` si aucun téléphone n'est connecté ou si la dernière frame
+    date de plus de `_STALE_FRAME_AFTER` (téléphone probablement déconnecté).
+    Appelé depuis le pipeline de reconnaissance en direct, à sa propre cadence.
+    """
+    session = _sessions.get(token)
+    if session is None or session.last_av_frame is None or session.last_frame_at is None:
+        return None
+    if datetime.now(timezone.utc) - session.last_frame_at > _STALE_FRAME_AFTER:
+        return None
+    return session.last_av_frame.to_ndarray(format="bgr24")
 
 
 def get_status(token: str | None) -> ConnectionResult:
