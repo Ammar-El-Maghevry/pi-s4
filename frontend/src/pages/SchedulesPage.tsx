@@ -95,13 +95,14 @@ export function SchedulesPage() {
               <th className="px-5 py-3 font-medium">Time</th>
               <th className="px-5 py-3 font-medium">Check windows</th>
               <th className="px-5 py-3 font-medium">Camera</th>
+              <th className="px-5 py-3 font-medium" />
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <TableLoading colSpan={7} />
+              <TableLoading colSpan={8} />
             ) : schedules.length === 0 ? (
-              <TableEmpty colSpan={7} />
+              <TableEmpty colSpan={8} />
             ) : (
               schedules.map((s) => (
                 <tr key={s.id} className="border-b border-border last:border-0">
@@ -136,6 +137,15 @@ export function SchedulesPage() {
                         ))}
                       </select>
                     )}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <button
+                      onClick={() => handleDelete(s)}
+                      disabled={deletingId === s.id}
+                      className="rounded-lg px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      {deletingId === s.id ? "Deleting…" : "Delete"}
+                    </button>
                   </td>
                 </tr>
               ))
