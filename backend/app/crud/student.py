@@ -10,6 +10,23 @@ from sqlalchemy.orm import Session
 from app.models.student import Student
 from app.schemas.student import StudentCreate, StudentUpdate
 
+# Taille d'une classe auto-assignee : au-dela, un nouveau numero de classe
+# demarre pour ce departement (voir `_assign_class_name`).
+STUDENTS_PER_CLASS = 40
+
+
+def _assign_class_name(db: Session, department: str | None) -> str | None:
+    """
+    Calcule la classe auto-assignee d'un etudiant : "{departement} {numero}",
+    les etudiants d'un meme departement etant regroupes par lots de
+    `STUDENTS_PER_CLASS` dans l'ordre de creation. Renvoie None sans departement.
+    """
+    if not department:
+        return None
+    existing_count = db.query(Student).filter(Student.department == department).count()
+    class_number = existing_count // STUDENTS_PER_CLASS + 1
+    return f"{department} {class_number}"
+
 
 def get_student(db: Session, student_pk: int) -> Student | None:
     """Récupère un étudiant par sa clé primaire."""

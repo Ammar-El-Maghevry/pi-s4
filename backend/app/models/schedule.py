@@ -29,5 +29,10 @@ class Schedule(Base):
     camera_id: Mapped[int | None] = mapped_column(
         ForeignKey("cameras.id", ondelete="SET NULL"), nullable=True
     )
+    # Classe assignee a cette seance (doit correspondre a Student.class_name) :
+    # seuls les etudiants de cette classe comptent dans son effectif et sont
+    # candidats a la reconnaissance en direct (voir services/attendance).
+    # Facultatif tant qu'aucune classe n'a ete choisie.
+    class_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
 
     camera = relationship("Camera")
