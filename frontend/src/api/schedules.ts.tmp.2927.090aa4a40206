@@ -76,6 +76,7 @@ export async function createClassPlan(input: ClassPlanInput): Promise<ScheduleWi
     name: input.name,
     start_time: input.start_time,
     end_time: input.end_time,
+    class_name: input.class_name,
   });
 
   const extras = readExtras();

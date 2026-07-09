@@ -52,6 +52,7 @@ export interface ClassPlanInput {
   end_time: string;
   check_in_offset_minutes: number;
   check_out_offset_minutes: number;
+  class_name: string | null;
 }
 
 export async function listClassPlans(): Promise<ScheduleWithExtras[]> {
