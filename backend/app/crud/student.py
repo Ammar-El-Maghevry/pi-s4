@@ -80,3 +80,9 @@ def set_student_photo(
     db.commit()
     db.refresh(student)
     return student
+
+
+def list_face_candidates(db: Session) -> list[tuple[int, list[float]]]:
+    """Retourne (id, embedding) pour tous les etudiants enroles (utilise par la reconnaissance en direct)."""
+    rows = db.query(Student.id, Student.face_embedding).filter(Student.face_embedding.isnot(None)).all()
+    return [(student_id, list(embedding)) for student_id, embedding in rows]
