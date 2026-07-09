@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { fetchDashboardSummary } from "../api/dashboard";
 import { listAttendanceResults } from "../api/attendance";
 import { listClassPlans } from "../api/schedules";
+import { getTeacherAttendance, listTeachers } from "../api/teachers";
 import { StatCard } from "../components/StatCard";
 import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { formatTime, nowMinutes, timeStringToMinutes, todayIso } from "../lib/time";
-import { AttendanceStatus, type DashboardSummary, type ScheduleWithExtras } from "../lib/types";
+import {
+  AttendanceStatus,
+  type DashboardSummary,
+  type ScheduleWithExtras,
+  type Teacher,
+} from "../lib/types";
 
 const POLL_INTERVAL_MS = 20_000;
 
@@ -16,17 +22,24 @@ export function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [schedules, setSchedules] = useState<ScheduleWithExtras[]>([]);
   const [presentBySchedule, setPresentBySchedule] = useState<Record<number, number>>({});
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teacherAttendance, setTeacherAttendance] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   async function load() {
     try {
-      const [summaryData, scheduleData, results] = await Promise.all([
-        fetchDashboardSummary(),
-        listClassPlans(),
-        listAttendanceResults({ date: todayIso() }),
-      ]);
+      const [summaryData, scheduleData, results, teacherData, teacherAttendanceData] =
+        await Promise.all([
+          fetchDashboardSummary(),
+          listClassPlans(),
+          listAttendanceResults({ date: todayIso() }),
+          listTeachers(),
+          getTeacherAttendance(todayIso()),
+        ]);
       setSummary(summaryData);
       setSchedules(scheduleData);
+      setTeachers(teacherData);
+      setTeacherAttendance(teacherAttendanceData);
       const counts: Record<number, number> = {};
       for (const result of results) {
         if (result.status === AttendanceStatus.PRESENT || result.status === AttendanceStatus.LATE) {
