@@ -98,32 +98,51 @@ def _process_camera(db, camera: Camera, now: datetime) -> None:
     if not faces:
         return
 
-    candidates = crud_student.list_face_candidates(db, class_name=schedule.class_name)
-    if not candidates:
+    student_candidates = crud_student.list_face_candidates(db, class_name=schedule.class_name)
+    teacher_candidates = crud_teacher.list_face_candidates(db)
+    if not student_candidates and not teacher_candidates:
         return
 
     today = now.date()
     for face in faces:
-        match = match_student(face.embedding, candidates, threshold=camera.face_match_threshold)
-        if match is None:
-            continue
-        student_id, score = match
-        key = (student_id, schedule.id)
-        if _marked_sessions.get(key) == today:
+        student_match = (
+            match_student(face.embedding, student_candidates, threshold=camera.face_match_threshold)
+            if student_candidates
+            else None
+        )
+        if student_match is not None:
+            student_id, score = student_match
+            key = (student_id, schedule.id)
+            if _marked_sessions.get(key) == today:
+                continue
+            crud_event.create_event(
+                db,
+                AttendanceEventCreate(
+                    student_id=student_id,
+                    event_type=EventType.ENTRY,
+                    confidence=score,
+                    camera_id=str(camera.id),
+                ),
+            )
+            _marked_sessions[key] = today
+            compute_student_date(db, student_id, today)
+            db.commit()
             continue
 
-        crud_event.create_event(
-            db,
-            AttendanceEventCreate(
-                student_id=student_id,
-                event_type=EventType.ENTRY,
-                confidence=score,
-                camera_id=str(camera.id),
-            ),
+        # Pas un etudiant connu de cette classe : essaie les enseignants (aucune
+        # notion d'entree/sortie pour eux, juste un drapeau present/absent du jour).
+        teacher_match = (
+            match_student(face.embedding, teacher_candidates, threshold=camera.face_match_threshold)
+            if teacher_candidates
+            else None
         )
-        _marked_sessions[key] = today
-        compute_student_date(db, student_id, today)
-        db.commit()
+        if teacher_match is None:
+            continue
+        teacher_id, _score = teacher_match
+        if _marked_teachers.get(teacher_id) == today:
+            continue
+        crud_teacher.set_attendance(db, teacher_id, today, True, source="camera")
+        _marked_teachers[teacher_id] = today
 
 
 def _close_finished_sessions(db, now: datetime) -> None:
