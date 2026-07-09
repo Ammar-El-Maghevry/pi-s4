@@ -189,6 +189,7 @@ export function PeoplePage() {
                     <td className="px-5 py-3 font-data text-text-muted">{s.student_id}</td>
                     <td className="px-5 py-3 text-text-muted">{s.email ?? "—"}</td>
                     <td className="px-5 py-3 text-text-muted">{s.department ?? "—"}</td>
+                    <td className="px-5 py-3 text-text-muted">{s.class_name ?? "—"}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-data ${
