@@ -307,9 +307,9 @@ function CameraModal({
             <span className="font-medium text-text">{savedCamera.name}</span>.
           </p>
           <div className="flex items-center gap-2 rounded-lg border border-border bg-bg-inset px-3 py-2 text-xs font-data">
-            <span className="flex-1 truncate">{pairingLink(savedCamera.webrtc_token)}</span>
+            <span className="flex-1 truncate">{savedCamera.pairing_link}</span>
             <button
-              onClick={() => copyPairingLink(savedCamera.webrtc_token, { showSuccess, showError })}
+              onClick={() => copyPairingLink(savedCamera.pairing_link, { showSuccess, showError })}
               className="shrink-0 text-accent hover:opacity-80"
             >
               Copy
