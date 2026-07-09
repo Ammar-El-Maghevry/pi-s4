@@ -106,3 +106,15 @@ export async function assignScheduleCamera(
   const { data } = await api.put<Schedule>(`/schedules/${scheduleId}`, { camera_id: cameraId });
   return data;
 }
+
+export async function deleteClassPlan(scheduleId: number): Promise<void> {
+  const extras = readExtras();
+  delete extras[scheduleId];
+  writeExtras(extras);
+
+  if (scheduleId < 0) {
+    writeLocalSchedules(readLocalSchedules().filter((s) => s.id !== scheduleId));
+    return;
+  }
+  await api.delete(`/schedules/${scheduleId}`);
+}
