@@ -21,6 +21,7 @@ export function SchedulesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [savingCameraFor, setSavingCameraFor] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   async function load() {
     setIsLoading(true);
@@ -49,6 +50,20 @@ export function SchedulesPage() {
       showError(apiErrorMessage(err));
     } finally {
       setSavingCameraFor(null);
+    }
+  }
+
+  async function handleDelete(schedule: ScheduleWithExtras) {
+    if (!confirm(`Delete "${schedule.name}"? This cannot be undone.`)) return;
+    setDeletingId(schedule.id);
+    try {
+      await deleteClassPlan(schedule.id);
+      showSuccess("Class plan deleted");
+      await load();
+    } catch (err) {
+      showError(apiErrorMessage(err));
+    } finally {
+      setDeletingId(null);
     }
   }
 
