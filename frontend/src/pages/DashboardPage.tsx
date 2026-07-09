@@ -24,22 +24,25 @@ export function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [schedules, setSchedules] = useState<ScheduleWithExtras[]>([]);
   const [presentBySchedule, setPresentBySchedule] = useState<Record<number, number>>({});
+  const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacherAttendance, setTeacherAttendance] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   async function load() {
     try {
-      const [summaryData, scheduleData, results, teacherData, teacherAttendanceData] =
+      const [summaryData, scheduleData, results, studentData, teacherData, teacherAttendanceData] =
         await Promise.all([
           fetchDashboardSummary(),
           listClassPlans(),
           listAttendanceResults({ date: todayIso() }),
+          listStudents(),
           listTeachers(),
           getTeacherAttendance(todayIso()),
         ]);
       setSummary(summaryData);
       setSchedules(scheduleData);
+      setStudents(studentData);
       setTeachers(teacherData);
       setTeacherAttendance(teacherAttendanceData);
       const counts: Record<number, number> = {};
