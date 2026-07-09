@@ -6,13 +6,20 @@ import {
   listStudents,
   uploadStudentPhoto,
 } from "../api/students";
-import { createTeacher, deleteTeacher, listTeachers } from "../api/teachers";
+import {
+  createTeacher,
+  deleteTeacher,
+  getTeacherAttendance,
+  listTeachers,
+  setTeacherPresent,
+} from "../api/teachers";
 import { Modal } from "../components/Modal";
 import { PhotoCaptureModal } from "../components/PhotoCaptureModal";
 import { PhotoPicker } from "../components/PhotoPicker";
 import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
+import { todayIso } from "../lib/time";
 import type { Student, Teacher } from "../lib/types";
 
 type Tab = "students" | "teachers";
