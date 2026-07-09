@@ -28,8 +28,7 @@ Hypothèse simplificatrice : un seul process uvicorn (déjà posée par
 suffisent (`_marked_sessions`, `_closed_sessions`).
 
 Le reste — détection/tracking multi-visages sophistiqués, franchissement de
-ligne, empreinte pour les enseignants — n'existe pas : seuls les étudiants ont
-un embedding enrôlé aujourd'hui (voir `app/models/student.py`).
+ligne — n'existe pas.
 """
 import asyncio
 import logging
