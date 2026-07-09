@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, get_db
 from app.crud import camera as crud_camera
 from app.crud import schedule as crud_schedule
-from app.schemas.schedule import ScheduleRead, ScheduleUpdate
+from app.schemas.schedule import ScheduleCreate, ScheduleRead, ScheduleUpdate
 
 router = APIRouter(
     prefix="/schedules",
@@ -25,6 +25,12 @@ router = APIRouter(
 def list_schedules(db: Session = Depends(get_db)):
     """Liste tous les créneaux de l'emploi du temps (séances et pauses)."""
     return crud_schedule.list_schedules(db)
+
+
+@router.post("", response_model=ScheduleRead, status_code=status.HTTP_201_CREATED)
+def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
+    """Crée un nouveau créneau ("class plan" ajouté depuis le frontend)."""
+    return crud_schedule.create_schedule(db, data)
 
 
 @router.get("/{schedule_pk}", response_model=ScheduleRead)
