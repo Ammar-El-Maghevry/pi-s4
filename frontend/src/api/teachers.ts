@@ -1,5 +1,5 @@
 import { api } from "../lib/api";
-import type { Teacher, TeacherCreate } from "../lib/types";
+import type { Teacher, TeacherAttendanceRecord, TeacherCreate } from "../lib/types";
 
 export async function listTeachers(search?: string): Promise<Teacher[]> {
   const { data } = await api.get<Teacher[]>("/teachers", {
@@ -31,12 +31,16 @@ export async function fetchTeacherPhotoUrl(id: number): Promise<string> {
   return URL.createObjectURL(data);
 }
 
+export async function listTeacherAttendance(date: string): Promise<TeacherAttendanceRecord[]> {
+  const { data } = await api.get<TeacherAttendanceRecord[]>("/teachers/attendance/today", {
+    params: { date },
+  });
+  return data;
+}
+
 export async function getTeacherAttendance(date: string): Promise<Record<number, boolean>> {
-  const { data } = await api.get<{ teacher_id: number; is_present: boolean }[]>(
-    "/teachers/attendance/today",
-    { params: { date } },
-  );
-  return Object.fromEntries(data.map((row) => [row.teacher_id, row.is_present]));
+  const rows = await listTeacherAttendance(date);
+  return Object.fromEntries(rows.map((row) => [row.teacher_id, row.is_present]));
 }
 
 export async function setTeacherPresent(
