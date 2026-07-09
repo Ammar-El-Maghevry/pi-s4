@@ -58,3 +58,30 @@ export async function deleteTeacher(id: string): Promise<void> {
   write(read().filter((t) => t.id !== id));
   return simulateLatency(undefined);
 }
+
+function readAttendance(): Record<string, Record<string, boolean>> {
+  try {
+    return JSON.parse(localStorage.getItem(ATTENDANCE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function writeAttendance(data: Record<string, Record<string, boolean>>): void {
+  localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(data));
+}
+
+export async function getTeacherAttendance(date: string): Promise<Record<string, boolean>> {
+  return simulateLatency(readAttendance()[date] ?? {});
+}
+
+export async function setTeacherPresent(
+  teacherId: string,
+  date: string,
+  present: boolean,
+): Promise<void> {
+  const all = readAttendance();
+  all[date] = { ...(all[date] ?? {}), [teacherId]: present };
+  writeAttendance(all);
+  return simulateLatency(undefined);
+}
