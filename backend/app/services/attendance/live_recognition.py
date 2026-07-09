@@ -8,11 +8,14 @@ enrôlés et on enregistre une ENTRÉE pour tout étudiant reconnu — une seule
 étudiant par séance (voir `_marked_sessions`).
 
 Dès que le créneau d'une séance se termine, on enregistre aussitôt une SORTIE
-pour chaque étudiant marqué présent à cette séance (`_close_finished_sessions`).
-C'est nécessaire : `intervals.py` traite une entrée sans sortie comme une
-présence qui court jusqu'à la fin de N'IMPORTE QUELLE fenêtre évaluée ensuite —
-sans cette clôture, un étudiant entré en séance 1 apparaîtrait automatiquement
-présent à toutes les séances suivantes de la journée.
+pour chaque étudiant ayant un intervalle encore ouvert avant la fin de ce
+créneau (`_close_finished_sessions`, dérivé des évènements en base — pas d'un
+cache mémoire — pour rester correct même si le process redémarre entre la fin
+de la séance et le prochain tick). C'est nécessaire : `intervals.py` traite une
+entrée sans sortie comme une présence qui court jusqu'à la fin de N'IMPORTE
+QUELLE fenêtre évaluée ensuite — sans cette clôture, un étudiant entré en
+séance 1 apparaîtrait automatiquement présent à toutes les séances suivantes de
+la journée.
 
 Hypothèse simplificatrice : un seul process uvicorn (déjà posée par
 `services/camera/webrtc.py`) donc des dicts/sets en mémoire process-local
@@ -36,6 +39,8 @@ from app.models.camera import Camera
 from app.models.enums import CameraSourceType, EventType, SessionType
 from app.schemas.attendance_event import AttendanceEventCreate
 from app.services.ai.face_embedding import extract_all_face_embeddings, match_student
+from app.services.attendance.engine import session_window
+from app.services.attendance.intervals import _naive, build_intervals
 from app.services.attendance.service import compute_student_date
 from app.services.camera.webrtc import get_latest_frame_bgr
 
