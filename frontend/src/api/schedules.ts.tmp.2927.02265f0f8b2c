@@ -101,6 +101,14 @@ export async function assignScheduleCamera(
   return data;
 }
 
+export async function assignScheduleClass(
+  scheduleId: number,
+  className: string | null,
+): Promise<Schedule> {
+  const { data } = await api.put<Schedule>(`/schedules/${scheduleId}`, { class_name: className });
+  return data;
+}
+
 export async function deleteClassPlan(scheduleId: number): Promise<void> {
   const extras = readExtras();
   delete extras[scheduleId];
