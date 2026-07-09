@@ -68,11 +68,21 @@ def warm_up_face_model() -> None:
     threading.Thread(target=_get_model, daemon=True).start()
 
 
+@app.on_event("startup")
+def start_live_recognition() -> None:
+    """Démarre la boucle de reconnaissance en direct (caméras téléphone / séance en cours)."""
+    from app.services.attendance.live_recognition import start as _start
+
+    _start()
+
+
 @app.on_event("shutdown")
 async def close_phone_camera_sessions() -> None:
     """Ferme proprement les sessions WebRTC de téléphone actives à l'arrêt."""
+    from app.services.attendance.live_recognition import stop as stop_live_recognition
     from app.services.camera import shutdown_phone_camera_sessions, stop_phone_camera_reaper
 
+    await stop_live_recognition()
     await stop_phone_camera_reaper()
     await shutdown_phone_camera_sessions()
 
