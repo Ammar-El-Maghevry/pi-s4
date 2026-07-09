@@ -2,11 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { listCameras } from "../api/cameras";
 import {
   assignScheduleCamera,
+  assignScheduleClass,
   createClassPlan,
   deleteClassPlan,
   listClassPlans,
   type ClassPlanInput,
 } from "../api/schedules";
+import { listStudents } from "../api/students";
 import { Modal } from "../components/Modal";
 import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useToast } from "../context/ToastContext";
@@ -18,17 +20,26 @@ export function SchedulesPage() {
   const { showError, showSuccess } = useToast();
   const [schedules, setSchedules] = useState<ScheduleWithExtras[]>([]);
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [classOptions, setClassOptions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [savingCameraFor, setSavingCameraFor] = useState<number | null>(null);
+  const [savingClassFor, setSavingClassFor] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   async function load() {
     setIsLoading(true);
     try {
-      const [plans, cams] = await Promise.all([listClassPlans(), listCameras()]);
+      const [plans, cams, students] = await Promise.all([
+        listClassPlans(),
+        listCameras(),
+        listStudents(),
+      ]);
       setSchedules(plans);
       setCameras(cams);
+      setClassOptions(
+        Array.from(new Set(students.map((s) => s.class_name).filter((c): c is string => !!c))).sort(),
+      );
     } catch (err) {
       showError(apiErrorMessage(err));
     } finally {
@@ -50,6 +61,19 @@ export function SchedulesPage() {
       showError(apiErrorMessage(err));
     } finally {
       setSavingCameraFor(null);
+    }
+  }
+
+  async function handleClassChange(scheduleId: number, className: string) {
+    setSavingClassFor(scheduleId);
+    try {
+      await assignScheduleClass(scheduleId, className || null);
+      showSuccess("Class assigned");
+      await load();
+    } catch (err) {
+      showError(apiErrorMessage(err));
+    } finally {
+      setSavingClassFor(null);
     }
   }
 
