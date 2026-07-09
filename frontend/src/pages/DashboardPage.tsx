@@ -82,6 +82,12 @@ export function DashboardPage() {
         <StatCard label="Active sessions" value={activeSessions} accent="accent" />
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Teachers enrolled" value={teachers.length} />
+        <StatCard label="Teachers present" value={teachersPresent} accent="present" />
+        <StatCard label="Teachers absent" value={teachersAbsent} accent="absent" />
+      </div>
+
       <div className="rounded-xl border border-border bg-bg-elevated">
         <div className="border-b border-border px-5 py-3">
           <h2 className="text-base font-semibold">Today's sessions</h2>
