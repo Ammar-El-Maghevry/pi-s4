@@ -49,7 +49,12 @@ export function PeoplePage() {
       if (tab === "students") {
         setStudents(await listStudents(search));
       } else {
-        setTeachers(await listTeachers(search));
+        const [teacherData, attendance] = await Promise.all([
+          listTeachers(search),
+          getTeacherAttendance(todayIso()),
+        ]);
+        setTeachers(teacherData);
+        setTeacherAttendance(attendance);
       }
     } catch (err) {
       showError(apiErrorMessage(err));
@@ -85,6 +90,12 @@ export function PeoplePage() {
     await deleteTeacher(id);
     showSuccess("Teacher removed");
     load();
+  }
+
+  async function handleToggleTeacherPresent(id: string) {
+    const next = !teacherAttendance[id];
+    setTeacherAttendance((prev) => ({ ...prev, [id]: next }));
+    await setTeacherPresent(id, todayIso(), next);
   }
 
   async function handlePhotoCapture(photo: Blob) {
