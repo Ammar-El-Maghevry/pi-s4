@@ -101,6 +101,7 @@ export function DashboardPage() {
           <thead>
             <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
               <th className="px-5 py-3 font-medium">Session</th>
+              <th className="px-5 py-3 font-medium">Class</th>
               <th className="px-5 py-3 font-medium">Time</th>
               <th className="px-5 py-3 font-medium">Room</th>
               <th className="px-5 py-3 font-medium">Present / Total</th>
@@ -109,9 +110,9 @@ export function DashboardPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <TableLoading colSpan={5} />
+              <TableLoading colSpan={6} />
             ) : schedules.length === 0 ? (
-              <TableEmpty colSpan={5} message="No sessions scheduled." />
+              <TableEmpty colSpan={6} message="No sessions scheduled." />
             ) : (
               schedules.map((session) => {
                 // Roster scoped to the session's assigned class, if any — an
@@ -125,6 +126,7 @@ export function DashboardPage() {
                 return (
                   <tr key={session.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3 font-medium">{session.name}</td>
+                    <td className="px-5 py-3 text-text-muted">{session.class_name ?? "Unassigned"}</td>
                     <td className="px-5 py-3 font-data text-text-muted">
                       {formatTime(session.start_time)}–{formatTime(session.end_time)}
                     </td>
