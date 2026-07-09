@@ -103,6 +103,7 @@ async def _consume_track(token: str, track) -> None:
                 return
             session.last_frame_size = (frame.width, frame.height)
             session.last_frame_at = datetime.now(timezone.utc)
+            session.last_av_frame = frame
     except (MediaStreamError, asyncio.CancelledError):
         return
 

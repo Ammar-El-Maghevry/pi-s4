@@ -46,6 +46,10 @@ class _PhoneCameraSession:
     pc: object  # aiortc.RTCPeerConnection (typé `object` pour ne pas importer aiortc au chargement)
     last_frame_size: tuple[int, int] | None = None  # (largeur, hauteur)
     last_frame_at: datetime | None = None
+    # Dernière frame brute (av.VideoFrame), gardée telle quelle : le décodage en
+    # tableau BGR (coûteux) n'a lieu qu'à la demande, dans `get_latest_frame_bgr`,
+    # à la cadence du pipeline de reconnaissance plutôt qu'a chaque frame reçue.
+    last_av_frame: object | None = None
     track_task: asyncio.Task | None = None
 
 
