@@ -11,6 +11,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+from app.config import settings
 from app.models.enums import CameraSourceType, CrossingDirection
 
 # Motif : capture les identifiants entre "://" et "@" pour les remplacer.
