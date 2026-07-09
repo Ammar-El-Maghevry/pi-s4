@@ -40,6 +40,26 @@ def save_student_photo(student_pk: int, content: bytes, content_type: str) -> st
     return relative_path
 
 
+def save_teacher_photo(teacher_pk: int, content: bytes, content_type: str) -> str:
+    """
+    Enregistre la photo d'un enseignant, remplace toute photo precedente, et
+    retourne le chemin relatif stocke en base (`teachers.photo_path`).
+    """
+    extension = ALLOWED_CONTENT_TYPES.get(content_type)
+    if extension is None:
+        raise ValueError(f"Type d'image non supporte : {content_type}")
+
+    teachers_dir = _storage_root() / "teachers"
+    teachers_dir.mkdir(parents=True, exist_ok=True)
+
+    for existing in teachers_dir.glob(f"{teacher_pk}.*"):
+        existing.unlink(missing_ok=True)
+
+    relative_path = f"teachers/{teacher_pk}{extension}"
+    (teachers_dir / f"{teacher_pk}{extension}").write_bytes(content)
+    return relative_path
+
+
 def resolve_photo_path(relative_path: str) -> Path | None:
     """
     Resout un chemin relatif stocke en base vers un chemin absolu, en verifiant
