@@ -54,7 +54,6 @@ export function SchedulesPage() {
   }
 
   async function handleDelete(schedule: ScheduleWithExtras) {
-    if (!confirm(`Delete "${schedule.name}"? This cannot be undone.`)) return;
     setDeletingId(schedule.id);
     try {
       await deleteClassPlan(schedule.id);
