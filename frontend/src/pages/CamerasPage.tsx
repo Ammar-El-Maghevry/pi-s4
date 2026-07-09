@@ -124,7 +124,9 @@ export function CamerasPage() {
               <th className="px-5 py-3 font-medium">Name</th>
               <th className="px-5 py-3 font-medium">Location</th>
               <th className="px-5 py-3 font-medium">Source</th>
-              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium" title="Whether the camera is enabled for use — not whether a phone is currently connected. Use Test to check the live connection.">
+                Enabled
+              </th>
               <th className="px-5 py-3" />
             </tr>
           </thead>
@@ -160,9 +162,9 @@ export function CamerasPage() {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-3">
-                      {c.source_type === CameraSourceType.PHONE && c.webrtc_token && (
+                      {c.source_type === CameraSourceType.PHONE && c.pairing_link && (
                         <button
-                          onClick={() => copyPairingLink(c.webrtc_token!, { showSuccess, showError })}
+                          onClick={() => copyPairingLink(c.pairing_link!, { showSuccess, showError })}
                           className="text-xs text-text-muted hover:text-accent"
                         >
                           Copy link
