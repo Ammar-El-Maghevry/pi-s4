@@ -47,3 +47,12 @@ def update_schedule(schedule_pk: int, data: ScheduleUpdate, db: Session = Depend
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera introuvable")
 
     return crud_schedule.update_schedule(db, schedule, data)
+
+
+@router.delete("/{schedule_pk}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_schedule(schedule_pk: int, db: Session = Depends(get_db)):
+    """Supprime un créneau de l'emploi du temps."""
+    schedule = crud_schedule.get_schedule(db, schedule_pk)
+    if schedule is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Creneau introuvable")
+    crud_schedule.delete_schedule(db, schedule)

@@ -26,3 +26,9 @@ def update_schedule(db: Session, schedule: Schedule, data: ScheduleUpdate) -> Sc
     db.commit()
     db.refresh(schedule)
     return schedule
+
+
+def delete_schedule(db: Session, schedule: Schedule) -> None:
+    """Supprime un créneau (les résultats de présence associés sont supprimés en cascade)."""
+    db.delete(schedule)
+    db.commit()
