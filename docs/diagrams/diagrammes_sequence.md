@@ -1,269 +1,251 @@
 # Diagrammes de séquence (UML)
 
-Participants réels du code : **Client**, **API FastAPI**, **Dépendances/JWT**
-(`core/deps.py` + `core/security.py`), **Couche CRUD** (`crud/*`),
-**Base PostgreSQL**.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API as API
+    participant CRUD as CRUD
+    participant DB as DB
+
+    Client->>API: POST /api/v1/auth/login (email, password)
+    API->>CRUD: authenticate_user
+    CRUD->>DB: SELECT users WHERE email
+    DB-->>CRUD: utilisateur
+    CRUD->>CRUD: verify_password (bcrypt)
+
+    alt Échec
+        API-->>Client: 401
+    else Succès
+        API->>API: create_access_token (JWT)
+        API-->>Client: 200 Token
+    end
+```
 
 ---
-
-## 1. Authentification (connexion administrateur) — *implémenté*
-
-Source : `app/api/routes/auth.py`, `app/crud/user.py`, `app/core/security.py`.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Client
-    participant API as API FastAPI<br/>(routes/auth.py)
-    participant JWT as Dépendances / JWT<br/>(core/security.py)
-    participant CRUD as Couche CRUD<br/>(crud/user.py)
-    participant DB as Base PostgreSQL
+    participant API as API
+    participant JWT as JWT
+    participant CRUD as CRUD
+    participant DB as DB
 
-    Client->>API: POST /api/v1/auth/login<br/>(username=email, password)
-    API->>CRUD: authenticate_user(db, email, password)
-    CRUD->>DB: SELECT * FROM users WHERE email = :email
-    DB-->>CRUD: utilisateur (ou aucun)
-    CRUD->>JWT: verify_password(password, hashed_password)
-    JWT-->>CRUD: vrai / faux (bcrypt)
-
-    alt Identifiants invalides
-        CRUD-->>API: None
-        API-->>Client: 401 « Email ou mot de passe incorrect »
-    else Identifiants valides
-        CRUD-->>API: utilisateur
-        API->>JWT: create_access_token(subject=user.email)
-        JWT-->>API: jeton JWT (HS256, sub=email, exp)
-        API-->>Client: 200 Token { access_token, token_type="bearer" }
+    Client->>API: POST /api/v1/students (Bearer, body)
+    API->>JWT: get_current_user
+    alt Jeton invalide
+        API-->>Client: 401
+    end
+    API->>CRUD: get_student_by_matricule
+    alt Matricule existe
+        API-->>Client: 409
+    else
+        API->>CRUD: create_student
+        CRUD->>DB: INSERT students
+        API-->>Client: 201 StudentRead
     end
 ```
 
 ---
 
-## 2. Création d'un étudiant (requête protégée) — *implémenté*
-
-Source : `app/api/routes/students.py`, `app/core/deps.py`, `app/crud/student.py`.
-
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client
-    participant API as API FastAPI<br/>(routes/students.py)
-    participant JWT as Dépendances / JWT<br/>(core/deps.py)
-    participant CRUD as Couche CRUD<br/>(crud/student.py)
-    participant DB as Base PostgreSQL
+    actor Admin
+    participant API as API
+    participant Photo as Photos
+    participant Face as InsightFace
+    participant DB as DB
 
-    Client->>API: POST /api/v1/students<br/>Authorization: Bearer <jeton><br/>{ full_name, student_id, ... }
+    Admin->>API: POST /students/{id}/photo (image)
+    API->>Photo: save_student_photo
+    Photo-->>API: photo_path
+    API->>Face: extract_single_face_embedding
 
-    Note over API,JWT: Dépendance get_current_user (protège la route)
-    API->>JWT: get_current_user(token)
-    JWT->>JWT: decode_access_token(token) -> email
-    alt Jeton invalide / expiré
-        JWT-->>API: 401
-        API-->>Client: 401 « Identifiants invalides ou jeton expiré »
-    else Jeton valide
-        JWT->>DB: SELECT * FROM users WHERE email = :email
-        DB-->>JWT: administrateur (is_active ?)
-        JWT-->>API: administrateur courant
-    end
-
-    Note over API,DB: Vérification d'unicité du matricule
-    API->>CRUD: get_student_by_matricule(db, student_id)
-    CRUD->>DB: SELECT * FROM students WHERE student_id = :student_id
-    DB-->>CRUD: étudiant existant (ou aucun)
-    CRUD-->>API: résultat
-
-    alt Matricule déjà présent
-        API-->>Client: 409 « Un étudiant avec ce matricule existe déjà »
-    else Matricule libre
-        API->>CRUD: create_student(db, data)
-        CRUD->>DB: INSERT INTO students (...) + COMMIT
-        DB-->>CRUD: étudiant créé
-        CRUD-->>API: étudiant
-        API-->>Client: 201 StudentRead (has_face_embedding dérivé)
+    alt Aucun visage
+        API-->>Admin: 422
+    else Plusieurs visages
+        API-->>Admin: 422
+    else 1 visage
+        API->>DB: UPDATE students SET photo, embedding
+        API-->>Admin: 200 StudentRead
     end
 ```
 
 ---
 
-## 3. Calcul de présence — *implémenté*
-
-Source : `app/api/routes/attendance.py`, `app/services/attendance/*`,
-`app/crud/attendance_event.py`, `app/crud/attendance_result.py`,
-`app/crud/schedule.py`.
-
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client
-    participant API as API FastAPI<br/>(routes/attendance.py)
-    participant Svc as Service présence<br/>(services/attendance/service.py)
-    participant Engine as Moteur pur<br/>(intervals.py + engine.py)
-    participant CRUD as Couche CRUD<br/>(events / results / schedule)
-    participant DB as Base PostgreSQL
+    actor Admin
+    participant API as API
+    participant Svc as Service
+    participant Engine as Moteur
+    participant DB as DB
 
-    Client->>API: POST /api/v1/attendance/compute?date=YYYY-MM-DD<br/>(&student_id optionnel)
-    Note over API: route protégée par get_current_user
+    Admin->>API: POST /attendance/compute?date=...
+    API->>Svc: compute_date
 
-    alt student_id fourni mais introuvable
-        API-->>Client: 404 « Etudiant introuvable »
-    else calcul lancé
-        API->>Svc: compute_date(db, on_date, student_id)
+    loop Chaque étudiant
+        Svc->>DB: get_events_for_student_on_date
+        DB-->>Svc: événements bruts
+        Svc->>Engine: build_intervals
+        Engine-->>Svc: intervalles [entrée→sortie]
 
-        alt student_id absent
-            Svc->>CRUD: distinct_student_ids_with_events_on_date(db, on_date)
-            CRUD->>DB: SELECT DISTINCT student_id des événements du jour
-            DB-->>CRUD: liste d'étudiants
-            CRUD-->>Svc: [étudiants avec événements]
+        loop Chaque séance
+            Svc->>Engine: compute_session (ratio chevauchement)
+            Engine-->>Svc: PRESENT/LATE/ABSENT
+            Svc->>DB: upsert_result (idempotent)
         end
+    end
 
-        loop pour chaque étudiant
-            Svc->>CRUD: get_events_for_student_on_date(db, student_id, on_date)
-            CRUD->>DB: SELECT événements (triés par timestamp)
-            DB-->>Svc: entrées / sorties brutes
-            Svc->>Engine: build_intervals(events)
-            Engine-->>Svc: intervalles [entrée→sortie] (sortie manquante = ouvert)
+    Svc-->>API: ComputeReport
+    API-->>Admin: 200
+```
 
-            loop pour chaque séance (SessionType.SESSION)
-                Svc->>Engine: compute_session(intervals, window_start, window_end)
-                Note over Engine: taux de chevauchement → present / late / absent
-                Engine-->>Svc: SessionComputation { status, entry_time, exit_time }
-                Svc->>CRUD: upsert_result(...) (idempotent)
-                CRUD->>DB: INSERT/UPDATE attendance_results<br/>(contrainte uq_presence_unique)
-            end
+---
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Phone as Téléphone
+    participant API as API
+    participant WebRTC as WebRTC
+    participant Live as LiveRecognition
+    participant Face as InsightFace
+    participant DB as DB
+
+    Phone->>API: GET /phone-camera/{token}
+    API-->>Phone: infos caméra
+
+    Phone->>Phone: getUserMedia
+    Phone->>API: POST /offer (SDP)
+    API->>WebRTC: handle_offer
+    WebRTC-->>API: réponse SDP
+    API-->>Phone: WebRTCAnswer
+
+    Note over Phone,WebRTC: Streaming vidéo en direct
+
+    loop Toutes les 3s
+        Live->>Live: _tick()
+        Live->>WebRTC: get_latest_frame_bgr
+        WebRTC-->>Live: frame
+        Live->>Face: extract_all_face_embeddings
+        Face-->>Live: visages détectés
+        Live->>Live: match_student
+        alt Match trouvé, pas marqué aujourd'hui
+            Live->>DB: INSERT attendance_event (ENTRY)
+            Live->>Live: compute_student_date
         end
-
-        Svc->>DB: COMMIT
-        Svc-->>API: ComputeReport { students_processed, sessions_per_student, results_written }
-        API-->>Client: 200 ComputeReportRead
     end
+
+    Phone->>API: POST /stop
+    API->>WebRTC: close_session
+    API-->>Phone: 204
 ```
 
 ---
 
-## 4. Flux caméra (une caméra + ligne de franchissement) — *(cible / phase future — NON IMPLÉMENTÉ)*
-
-> ⚠️ **Ce flux n'existe pas encore dans le code.** Le service IA est un simple
-> **producteur d'événements** : il écrit les mêmes `attendance_events` que la
-> saisie manuelle (`POST /api/v1/events`), puis le calcul de présence (section 3,
-> déjà implémenté) s'applique sans changement. Diagramme reconstitué à partir de
-> `app/services/ai/README.md` et de
-> `docs/detection_entree_sortie_camera_unique.md`.
-
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Cam as Caméra unique<br/>(entrée de la salle)
-    participant Pipe as Pipeline vision<br/>RetinaFace + ByteTrack<br/>+ MiniFASNet + InsightFace<br/>(à définir)
-    participant Line as Ligne de franchissement<br/>(LineCrossingDirection — à définir)
-    participant API as API événements<br/>(POST /api/v1/events)
-    participant Engine as Calcul de présence<br/>(section 3 — implémenté)
-    participant DB as Base PostgreSQL
+    actor Admin
+    participant API as API
+    participant DB as DB
 
-    Cam->>Pipe: flux vidéo (une seule caméra)
-
-    Note over Pipe: Détection (RetinaFace) → suivi (ByteTrack)<br/>→ anti-spoofing (MiniFASNet) → reconnaissance
-    Pipe->>DB: recherche d'identité par similarité cosinus<br/>(pgvector, seuil FACE_MATCH_THRESHOLD) sur face_embedding
-    DB-->>Pipe: étudiant reconnu (ou inconnu)
-
-    Pipe->>Line: track { id, trajectoire, identité, horodatage }
-    Note over Line: sens de traversée de la ligne virtuelle<br/>validé sur N frames + cooldown anti-doublon
-    alt Traversée haut → bas
-        Line->>Line: sens = ENTRÉE (entry)
-    else Traversée bas → haut
-        Line->>Line: sens = SORTIE (exit)
-    else Pas de traversée complète
-        Line->>Line: ignoré (arrêt sur le seuil / bruit)
+    Admin->>API: POST /cameras (name, source_type, config)
+    alt source_type = phone
+        Note over API: génère webrtc_token aléatoire
+    else source_type = ip_camera
+        Note over API: valide source_url
     end
-
-    Line->>API: POST /events { student_id, event_type, camera_id } (+ Snapshot)
-    API->>DB: INSERT INTO attendance_events (...)
-    DB-->>API: événement enregistré
-
-    Note over Engine,DB: Périodiquement / en fin de séance (cf. section 3)
-    Engine->>DB: POST /attendance/compute → calcul du statut
-    DB-->>Engine: attendance_results (present / late / absent)
+    API->>DB: INSERT cameras
+    DB-->>API: caméra
+    API-->>Admin: CameraRead (URL masquée, pairing_link)
 ```
 
 ---
 
-## 5. Configuration d'une caméra par l'administrateur — *implémenté*
-
-Source : `app/api/routes/cameras.py`, `app/schemas/camera.py`, `app/crud/camera.py`.
-
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Administrateur
-    participant API as API FastAPI<br/>(routes/cameras.py)
-    participant JWT as Dépendances / JWT<br/>(core/deps.py)
-    participant Schema as Schéma Pydantic<br/>(schemas/camera.py)
-    participant CRUD as Couche CRUD<br/>(crud/camera.py)
-    participant DB as Base PostgreSQL
+    actor Admin
+    participant API as API
+    participant Svc as OpenCV
+    participant DB as DB
 
-    Client->>API: POST /api/v1/cameras (ou PUT /cameras/{id})<br/>Authorization: Bearer <jeton><br/>{ name, source_url, ligne, seuils... }
-
-    Note over API,JWT: Dépendance get_current_user (protège la route)
-    API->>JWT: get_current_user(token)
-    JWT-->>API: administrateur courant (ou 401)
-
-    Note over API,Schema: Validation des seuils
-    API->>Schema: valider CameraCreate / CameraUpdate
-    alt Seuils hors [0,1] ou present_threshold <= late_threshold
-        Schema-->>API: ValidationError
-        API-->>Client: 422 Unprocessable Entity
-    else Données valides
-        Schema-->>API: données validées
-        API->>CRUD: create_camera / update_camera(db, data)
-        CRUD->>DB: INSERT / UPDATE cameras<br/>(source_url complet, identifiants inclus)
-        DB-->>CRUD: caméra enregistrée
-        CRUD-->>API: objet Camera
-        Note over API,Schema: CameraRead masque le source_url
-        API->>Schema: mask_source_url(source_url)
-        Schema-->>API: rtsp://***:***@host:554/stream
-        API-->>Client: 201 / 200 CameraRead (identifiants masqués)
-    end
-```
-
----
-
-## 6. Test de connexion à une caméra — *implémenté*
-
-Source : `app/api/routes/cameras.py`, `app/services/camera/connection.py`.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Administrateur
-    participant API as API FastAPI<br/>(routes/cameras.py)
-    participant CRUD as Couche CRUD<br/>(crud/camera.py)
-    participant DB as Base PostgreSQL
-    participant Svc as Service caméra<br/>(services/camera/connection.py)
-    participant CV as OpenCV<br/>(import paresseux)
-
-    Client->>API: POST /api/v1/cameras/{id}/test-connection<br/>Authorization: Bearer <jeton>
-    Note over API: route protégée par get_current_user
-
-    API->>CRUD: get_camera(db, id)
-    CRUD->>DB: SELECT * FROM cameras WHERE id = :id
-    DB-->>CRUD: caméra (ou aucune)
-    alt Caméra introuvable
-        API-->>Client: 404 « Camera introuvable »
-    else Caméra trouvée
-        API->>Svc: test_camera_connection(source_url)
-        Svc->>CV: import cv2 (au premier appel)
-        alt OpenCV non installé
-            CV-->>Svc: ImportError
-            Svc-->>API: { success:false, message:"OpenCV indisponible" }
-        else OpenCV disponible
-            Svc->>CV: VideoCapture(source).read() (timeout court)
-            alt Flux injoignable / aucune image
-                CV-->>Svc: échec
-                Svc-->>API: { success:false, message:"..." }
-            else Une image lue
-                CV-->>Svc: frame (hauteur, largeur)
-                Svc-->>API: { success:true, width, height }
-            end
+    Admin->>API: POST /cameras/{id}/test-connection
+    API->>DB: get_camera
+    alt source_type = phone
+        API-->>Admin: succès immédiat
+    else
+        API->>Svc: VideoCapture.read()
+        alt OK
+            Svc-->>API: { success, width, height }
+        else Échec
+            Svc-->>API: { success: false }
         end
-        API-->>Client: 200 CameraTestResult
+        API-->>Admin: CameraTestResult
     end
+```
+
+---
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin
+    participant API as API
+    participant SMTP as SMTP
+
+    Admin->>API: POST /cameras/{id}/send-pairing-email
+    alt pas de pairing_email
+        API-->>Admin: 400
+    else SMTP non configuré
+        API-->>Admin: 503
+    else
+        API->>SMTP: send_pairing_email
+        SMTP-->>API: ok/échec
+        API-->>Admin: EmailSendResult
+    end
+```
+
+---
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin
+    participant API as API
+    participant Export as Export
+    participant DB as DB
+
+    Admin->>API: GET /reports?period=daily&format=csv
+    API->>DB: build_report (agrégation)
+    DB-->>API: Report
+    API->>Export: to_csv / to_excel / to_pdf
+    Export-->>API: bytes
+    API-->>Admin: 200 (fichier)
+```
+
+---
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin
+    participant API as API
+    participant DB as DB
+
+    Admin->>API: GET /dashboard/summary
+    par total
+        API->>DB: COUNT students
+    and présents
+        API->>DB: COUNT results WHERE present
+    and récents
+        API->>DB: SELECT recent events
+    end
+    API-->>Admin: DashboardSummary
 ```
