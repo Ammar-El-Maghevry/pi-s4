@@ -139,10 +139,7 @@ def get_attendance(
     db: Session = Depends(get_db),
 ):
     """Liste les statuts de présence des enseignants pour une date."""
-    return [
-        TeacherAttendanceRead(teacher_id=tid, attendance_date=on_date, is_present=present, source="")
-        for tid, present in crud_teacher.get_attendance_for_date(db, on_date).items()
-    ]
+    return crud_teacher.list_attendance_for_date(db, on_date)
 
 
 @router.put("/{teacher_pk}/attendance", response_model=TeacherAttendanceRead)
