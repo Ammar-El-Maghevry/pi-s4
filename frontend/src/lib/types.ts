@@ -58,6 +58,7 @@ export interface Camera {
   source_url: string;
   webrtc_token: string | null;
   pairing_email: string | null;
+  pairing_link: string | null;
   is_active: boolean;
   line_x1: number | null;
   line_y1: number | null;

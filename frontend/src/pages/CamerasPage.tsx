@@ -13,20 +13,13 @@ import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { CameraSourceType, type Camera, type CameraCreate } from "../lib/types";
 
-// Always HTTPS on a fixed port, regardless of the scheme/port the admin is
-// currently browsing from: phone browsers only expose camera access on a
-// secure context, so the pairing link can't just reuse window.location.origin
-// (the admin dashboard itself is commonly viewed over plain LAN HTTP).
-function pairingLink(token: string): string {
-  const httpsPort = import.meta.env.VITE_PHONE_PAIRING_HTTPS_PORT ?? "8443";
-  return `https://${window.location.hostname}:${httpsPort}/phone-camera/${token}`;
-}
-
+// The link is computed server-side (from PHONE_PAIRING_BASE_URL) rather than
+// from window.location: the admin dashboard is commonly viewed over
+// "localhost" or a different LAN alias than the phone can actually reach.
 async function copyPairingLink(
-  token: string,
+  link: string,
   toast: { showSuccess: (msg: string) => void; showError: (msg: string) => void },
 ): Promise<void> {
-  const link = pairingLink(token);
   try {
     await navigator.clipboard.writeText(link);
     toast.showSuccess("Pairing link copied");
