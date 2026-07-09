@@ -221,9 +221,11 @@ export function SchedulesPage() {
 }
 
 function NewClassPlanModal({
+  classOptions,
   onClose,
   onCreated,
 }: {
+  classOptions: string[];
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -237,6 +239,7 @@ function NewClassPlanModal({
     end_time: "09:30",
     check_in_offset_minutes: 15,
     check_out_offset_minutes: 15,
+    class_name: null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -267,6 +270,23 @@ function NewClassPlanModal({
           onChange={(v) => set("teacher", v)}
           required
         />
+        <div>
+          <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
+            Class
+          </label>
+          <select
+            value={form.class_name ?? ""}
+            onChange={(e) => set("class_name", e.target.value || null)}
+            className="w-full rounded-lg border border-border bg-bg-inset px-3 py-2 text-sm outline-none focus:border-accent"
+          >
+            <option value="">Unassigned</option>
+            {classOptions.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <TextField label="Room" value={form.room} onChange={(v) => set("room", v)} required />
           <div>
