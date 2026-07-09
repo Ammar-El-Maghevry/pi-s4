@@ -36,6 +36,7 @@ export function PeoplePage() {
   const [search, setSearch] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teacherAttendance, setTeacherAttendance] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [photoTarget, setPhotoTarget] = useState<Student | null>(null);
