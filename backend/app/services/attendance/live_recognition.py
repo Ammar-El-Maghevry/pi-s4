@@ -125,8 +125,20 @@ def _close_finished_sessions(db, now: datetime) -> None:
             continue
         _closed_sessions.add(close_key)
 
-        for (student_id, schedule_id), marked_date in list(_marked_sessions.items()):
-            if schedule_id != schedule.id or marked_date != today:
+        # Dérivé de la base plutôt que de `_marked_sessions` : un redémarrage du
+        # process entre la fin de la séance et le prochain tick effacerait ce
+        # cache mémoire, laissant un étudiant réellement entré "ouvert" pour de
+        # bon (voir la présence qui, sinon, fuiterait vers les séances
+        # suivantes). Idempotent : si déjà clôturé, plus aucun intervalle
+        # ouvert n'est trouvé et cette passe ne fait rien.
+        _, window_end = session_window(today, schedule.start_time, schedule.end_time)
+        for student_id in crud_event.distinct_student_ids_with_events_on_date(db, today):
+            events = crud_event.get_events_for_student_on_date(db, student_id, today)
+            has_open_before_window_end = any(
+                interval.end is None and _naive(interval.start) < window_end
+                for interval in build_intervals(events)
+            )
+            if not has_open_before_window_end:
                 continue
             crud_event.create_event(
                 db,

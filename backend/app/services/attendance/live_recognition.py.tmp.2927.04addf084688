@@ -36,6 +36,8 @@ from app.models.camera import Camera
 from app.models.enums import CameraSourceType, EventType, SessionType
 from app.schemas.attendance_event import AttendanceEventCreate
 from app.services.ai.face_embedding import extract_all_face_embeddings, match_student
+from app.services.attendance.engine import session_window
+from app.services.attendance.intervals import _naive, build_intervals
 from app.services.attendance.service import compute_student_date
 from app.services.camera.webrtc import get_latest_frame_bgr
 
