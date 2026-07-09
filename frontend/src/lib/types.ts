@@ -192,6 +192,14 @@ export interface Teacher {
   updated_at: string;
 }
 
+export interface TeacherAttendanceRecord {
+  teacher_id: number;
+  attendance_date: string;
+  is_present: boolean;
+  source: string;
+  marked_at: string;
+}
+
 export interface TeacherCreate {
   full_name: string;
   email?: string | null;
