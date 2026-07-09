@@ -250,6 +250,18 @@ export function PeoplePage() {
                     <td className="px-5 py-3 font-data text-text-muted">{t.teacher_id}</td>
                     <td className="px-5 py-3 text-text-muted">{t.email ?? "—"}</td>
                     <td className="px-5 py-3 text-text-muted">{t.department ?? "—"}</td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => handleToggleTeacherPresent(t.id)}
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-data ${
+                          teacherAttendance[t.id]
+                            ? "border-present/30 bg-present/10 text-present"
+                            : "border-border bg-bg-inset text-text-muted"
+                        }`}
+                      >
+                        {teacherAttendance[t.id] ? "Present" : "Absent"}
+                      </button>
+                    </td>
                     <td className="px-5 py-3 text-right">
                       <button
                         onClick={() => handleDeleteTeacher(t.id)}
@@ -266,8 +278,8 @@ export function PeoplePage() {
         )}
         {tab === "teachers" && (
           <p className="border-t border-border px-5 py-2 text-xs text-text-muted">
-            Teacher records are stored locally in this browser — the backend has no teacher
-            endpoint yet.
+            Teacher records and attendance are stored locally in this browser — the backend has no
+            teacher endpoint yet. Click "Today" to mark a teacher present/absent.
           </p>
         )}
       </div>
