@@ -183,17 +183,19 @@ export interface DashboardSummary {
 // --- Not yet backed by the real API (see frontend/README.md) ---
 // Teachers have no backend model/CRUD yet; persisted client-side only.
 export interface Teacher {
-  id: string;
+  id: number;
   full_name: string;
-  teacher_id: string;
   email: string | null;
-  department: string | null;
-  // No backend photo storage for teachers yet, so this is a data: URL stored
-  // directly in localStorage alongside the rest of the record.
-  photo_data_url: string | null;
+  photo_path: string | null;
+  has_face_embedding: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-export type TeacherCreate = Omit<Teacher, "id">;
+export interface TeacherCreate {
+  full_name: string;
+  email?: string | null;
+}
 
 // Schedules have no `teacher`/`room`/`day`/offset fields or create endpoint yet;
 // these are layered on top of the real schedule rows, client-side only.

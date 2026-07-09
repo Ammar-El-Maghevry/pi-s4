@@ -9,9 +9,11 @@ import {
 import {
   createTeacher,
   deleteTeacher,
+  fetchTeacherPhotoUrl,
   getTeacherAttendance,
   listTeachers,
   setTeacherPresent,
+  uploadTeacherPhoto,
 } from "../api/teachers";
 import { Modal } from "../components/Modal";
 import { PhotoCaptureModal } from "../components/PhotoCaptureModal";
@@ -24,22 +26,17 @@ import type { Student, Teacher } from "../lib/types";
 
 type Tab = "students" | "teachers";
 
-// Teacher photos are base64-encoded straight into localStorage (no backend
-// model yet — see api/teachers.ts), which is shared with everything else the
-// app stores there and typically capped around 5-10MB per origin. Cap well
-// below that so a few teacher photos can't starve auth/schedule storage.
-const MAX_TEACHER_PHOTO_BYTES = 1.5 * 1024 * 1024;
-
 export function PeoplePage() {
   const { showError, showSuccess } = useToast();
   const [tab, setTab] = useState<Tab>("students");
   const [search, setSearch] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [teacherAttendance, setTeacherAttendance] = useState<Record<string, boolean>>({});
+  const [teacherAttendance, setTeacherAttendance] = useState<Record<number, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [photoTarget, setPhotoTarget] = useState<Student | null>(null);
+  const [teacherPhotoTarget, setTeacherPhotoTarget] = useState<Teacher | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
@@ -85,14 +82,14 @@ export function PeoplePage() {
     }
   }
 
-  async function handleDeleteTeacher(id: string) {
+  async function handleDeleteTeacher(id: number) {
     if (!confirm("Remove this teacher?")) return;
     await deleteTeacher(id);
     showSuccess("Teacher removed");
     load();
   }
 
-  async function handleToggleTeacherPresent(id: string) {
+  async function handleToggleTeacherPresent(id: number) {
     const next = !teacherAttendance[id];
     setTeacherAttendance((prev) => ({ ...prev, [id]: next }));
     await setTeacherPresent(id, todayIso(), next);
@@ -106,6 +103,22 @@ export function PeoplePage() {
       await uploadStudentPhoto(photoTarget.id, photo);
       showSuccess("Photo enrolled — face embedding computed");
       setPhotoTarget(null);
+      load();
+    } catch (err) {
+      setPhotoError(apiErrorMessage(err));
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }
+
+  async function handleTeacherPhotoCapture(photo: Blob) {
+    if (!teacherPhotoTarget) return;
+    setPhotoError(null);
+    setIsUploadingPhoto(true);
+    try {
+      await uploadTeacherPhoto(teacherPhotoTarget.id, photo);
+      showSuccess("Photo enrolled — face embedding computed");
+      setTeacherPhotoTarget(null);
       load();
     } catch (err) {
       setPhotoError(apiErrorMessage(err));
@@ -220,38 +233,44 @@ export function PeoplePage() {
               <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
                 <th className="px-5 py-3 font-medium">Photo</th>
                 <th className="px-5 py-3 font-medium">Name</th>
-                <th className="px-5 py-3 font-medium">Teacher ID</th>
                 <th className="px-5 py-3 font-medium">Email</th>
-                <th className="px-5 py-3 font-medium">Department</th>
+                <th className="px-5 py-3 font-medium">Live status</th>
                 <th className="px-5 py-3 font-medium">Today</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <TableLoading colSpan={7} />
+                <TableLoading colSpan={6} />
               ) : teachers.length === 0 ? (
-                <TableEmpty colSpan={7} />
+                <TableEmpty colSpan={6} />
               ) : (
                 teachers.map((t) => (
                   <tr key={t.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3">
-                      {t.photo_data_url ? (
-                        <img
-                          src={t.photo_data_url}
-                          alt={t.full_name}
-                          className="h-9 w-9 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-border text-text-muted">
-                          <span className="text-xs">+</span>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => {
+                          setPhotoError(null);
+                          setTeacherPhotoTarget(t);
+                        }}
+                        title={t.has_face_embedding ? "Retake photo" : "Add photo"}
+                      >
+                        <TeacherAvatar teacher={t} />
+                      </button>
                     </td>
                     <td className="px-5 py-3 font-medium">{t.full_name}</td>
-                    <td className="px-5 py-3 font-data text-text-muted">{t.teacher_id}</td>
                     <td className="px-5 py-3 text-text-muted">{t.email ?? "—"}</td>
-                    <td className="px-5 py-3 text-text-muted">{t.department ?? "—"}</td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-data ${
+                          t.has_face_embedding
+                            ? "border-present/30 bg-present/10 text-present"
+                            : "border-border bg-bg-inset text-text-muted"
+                        }`}
+                      >
+                        {t.has_face_embedding ? "Enrolled" : "Not enrolled"}
+                      </span>
+                    </td>
                     <td className="px-5 py-3">
                       <button
                         onClick={() => handleToggleTeacherPresent(t.id)}
@@ -280,8 +299,8 @@ export function PeoplePage() {
         )}
         {tab === "teachers" && (
           <p className="border-t border-border px-5 py-2 text-xs text-text-muted">
-            Teacher records and attendance are stored locally in this browser — the backend has no
-            teacher endpoint yet. Click "Today" to mark a teacher present/absent.
+            Enroll a photo (click a teacher's avatar) so the live camera can recognize them and mark
+            them present automatically — same as students. "Today" also lets you mark it by hand.
           </p>
         )}
       </div>
@@ -302,6 +321,16 @@ export function PeoplePage() {
           title={`Enroll photo — ${photoTarget.full_name}`}
           onClose={() => setPhotoTarget(null)}
           onCapture={handlePhotoCapture}
+          isSubmitting={isUploadingPhoto}
+          error={photoError}
+        />
+      )}
+
+      {teacherPhotoTarget && (
+        <PhotoCaptureModal
+          title={`Enroll photo — ${teacherPhotoTarget.full_name}`}
+          onClose={() => setTeacherPhotoTarget(null)}
+          onCapture={handleTeacherPhotoCapture}
           isSubmitting={isUploadingPhoto}
           error={photoError}
         />
@@ -330,6 +359,34 @@ function StudentAvatar({ student }: { student: Student }) {
 
   if (url) {
     return <img src={url} alt={student.full_name} className="h-9 w-9 rounded-full object-cover" />;
+  }
+  return (
+    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-border text-text-muted">
+      <span className="text-xs">+</span>
+    </div>
+  );
+}
+
+function TeacherAvatar({ teacher }: { teacher: Teacher }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!teacher.has_face_embedding) {
+      setUrl(null);
+      return;
+    }
+    let objectUrl: string | null = null;
+    fetchTeacherPhotoUrl(teacher.id).then((u) => {
+      objectUrl = u;
+      setUrl(u);
+    });
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [teacher.id, teacher.has_face_embedding]);
+
+  if (url) {
+    return <img src={url} alt={teacher.full_name} className="h-9 w-9 rounded-full object-cover" />;
   }
   return (
     <div className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-border text-text-muted">
@@ -377,20 +434,17 @@ function AddPersonModal({
           showSuccess("Student added");
         }
       } else {
-        if (photo && photo.size > MAX_TEACHER_PHOTO_BYTES) {
-          throw new Error(
-            `Photo is too large (max ${MAX_TEACHER_PHOTO_BYTES / (1024 * 1024)}MB) — teacher ` +
-              "photos are stored in this browser only, which has limited space.",
-          );
+        const teacher = await createTeacher({ full_name: fullName, email: email || null });
+        if (photo) {
+          try {
+            await uploadTeacherPhoto(teacher.id, photo);
+            showSuccess("Teacher added with photo enrolled");
+          } catch (photoErr) {
+            showError(`Teacher added, but photo upload failed: ${apiErrorMessage(photoErr)}`);
+          }
+        } else {
+          showSuccess("Teacher added");
         }
-        await createTeacher({
-          full_name: fullName,
-          teacher_id: idNumber,
-          email: email || null,
-          department: department || null,
-          photo_data_url: photo ? await blobToDataUrl(photo) : null,
-        });
-        showSuccess("Teacher added");
       }
       onCreated();
     } catch (err) {
@@ -404,17 +458,16 @@ function AddPersonModal({
     <Modal title={`Add ${tab === "students" ? "student" : "teacher"}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <Field label="Full name" value={fullName} onChange={setFullName} required />
-        <Field
-          label={tab === "students" ? "Student ID" : "Teacher ID"}
-          value={idNumber}
-          onChange={setIdNumber}
-          required
-        />
+        {tab === "students" && (
+          <>
+            <Field label="Student ID" value={idNumber} onChange={setIdNumber} required />
+            <Field label="Department" value={department} onChange={setDepartment} />
+          </>
+        )}
         <Field label="Email" value={email} onChange={setEmail} type="email" />
-        <Field label="Department" value={department} onChange={setDepartment} />
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-            Photo (optional)
+            Photo (optional — enroll now so the live camera can recognize them)
           </label>
           <PhotoPicker value={photo} onChange={setPhoto} height={200} />
         </div>
@@ -428,15 +481,6 @@ function AddPersonModal({
       </form>
     </Modal>
   );
-}
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
 }
 
 function Field({
