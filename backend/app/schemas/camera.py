@@ -131,6 +131,10 @@ class CameraRead(BaseModel):
     # non masqué, ce n'est pas un identifiant de connexion et seuls les admins le voient.
     webrtc_token: str | None = None
     pairing_email: str | None = None
+    # Calcule depuis PHONE_PAIRING_BASE_URL (backend) plutot que window.location
+    # cote frontend : l'admin peut consulter le tableau de bord via "localhost",
+    # ce qui produirait un lien inutilisable pour le telephone.
+    pairing_link: str | None = None
     is_active: bool
 
     line_x1: int | None = None
