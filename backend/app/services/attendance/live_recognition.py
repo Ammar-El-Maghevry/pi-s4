@@ -90,7 +90,7 @@ def _process_camera(db, camera: Camera, now: datetime) -> None:
     if not faces:
         return
 
-    candidates = crud_student.list_face_candidates(db)
+    candidates = crud_student.list_face_candidates(db, class_name=schedule.class_name)
     if not candidates:
         return
 
