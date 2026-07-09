@@ -24,6 +24,7 @@ def create_schedule(db: Session, data: ScheduleCreate) -> Schedule:
         start_time=data.start_time,
         end_time=data.end_time,
         session_type=SessionType.SESSION,
+        class_name=data.class_name,
     )
     db.add(schedule)
     db.commit()
@@ -37,8 +38,15 @@ def get_schedule(db: Session, schedule_pk: int) -> Schedule | None:
 
 
 def update_schedule(db: Session, schedule: Schedule, data: ScheduleUpdate) -> Schedule:
-    """Assigne (ou retire) la caméra de la salle où se déroule la séance."""
-    schedule.camera_id = data.camera_id
+    """
+    Assigne (ou retire) la caméra et/ou la classe de la séance.
+
+    `exclude_unset=True` : un appel qui ne transmet que `camera_id` (ex.
+    l'assignation de caméra depuis la page Class plans) ne doit pas écraser
+    `class_name` avec None, et inversement.
+    """
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(schedule, field, value)
     db.commit()
     db.refresh(schedule)
     return schedule
