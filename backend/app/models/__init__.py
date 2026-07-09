@@ -16,11 +16,15 @@ from app.models.enums import (
 from app.models.schedule import Schedule
 from app.models.snapshot import Snapshot
 from app.models.student import Student
+from app.models.teacher import Teacher
+from app.models.teacher_attendance import TeacherAttendance
 from app.models.user import User
 
 __all__ = [
     "User",
     "Student",
+    "Teacher",
+    "TeacherAttendance",
     "Schedule",
     "AttendanceEvent",
     "AttendanceResult",
