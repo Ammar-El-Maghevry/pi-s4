@@ -25,6 +25,11 @@ class Student(Base):
     student_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     department: Mapped[str | None] = mapped_column(String(150), nullable=True, index=True)
+    # Classe assignee automatiquement a la creation : "{department} {numero}",
+    # les etudiants d'un meme departement etant regroupes par lots de
+    # `STUDENTS_PER_CLASS` (voir crud/student.py::_assign_class_name). Null si
+    # aucun departement n'est renseigne.
+    class_name: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
     # Chemin vers la photo de référence sur le disque (pas l'image elle-même en base).
     photo_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     # Vecteur d'embedding facial ; rempli lors de l'enrôlement (phase 2).
