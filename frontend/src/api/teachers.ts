@@ -1,87 +1,48 @@
-// The backend has no Teacher model/CRUD yet (see frontend/README.md), so this
-// module persists teachers client-side only, in localStorage, with the same
-// shape the real CRUD endpoint would use once it exists.
+import { api } from "../lib/api";
 import type { Teacher, TeacherCreate } from "../lib/types";
 
-const STORAGE_KEY = "presence.teachers";
-// No backend attendance tracking for teachers yet (mirrors the student
-// system's limitation: there's no live face-recognition pipeline for anyone
-// yet), so presence is a manual per-day toggle stored client-side, keyed by
-// ISO date then teacher id. Absent unless explicitly marked present, same
-// default as the student attendance engine.
-const ATTENDANCE_KEY = "presence.teacher_attendance";
-
-function read(): Teacher[] {
-  try {
-    const stored: Partial<Teacher>[] = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-    // Records created before `photo_data_url` existed have no such key at
-    // all (not even `null`); backfill so the field always matches its type.
-    return stored.map((t) => ({ photo_data_url: null, ...t }) as Teacher);
-  } catch {
-    return [];
-  }
-}
-
-function write(teachers: Teacher[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(teachers));
-}
-
-function simulateLatency<T>(value: T): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), 150));
-}
-
 export async function listTeachers(search?: string): Promise<Teacher[]> {
-  let teachers = read();
-  if (search) {
-    const q = search.toLowerCase();
-    teachers = teachers.filter(
-      (t) =>
-        t.full_name.toLowerCase().includes(q) ||
-        t.teacher_id.toLowerCase().includes(q) ||
-        (t.department ?? "").toLowerCase().includes(q),
-    );
-  }
-  return simulateLatency(teachers);
+  const { data } = await api.get<Teacher[]>("/teachers", {
+    params: { limit: 500, search: search || undefined },
+  });
+  return data;
 }
 
 export async function createTeacher(payload: TeacherCreate): Promise<Teacher> {
-  const teachers = read();
-  if (teachers.some((t) => t.teacher_id === payload.teacher_id)) {
-    throw new Error("A teacher with this ID already exists");
-  }
-  const teacher: Teacher = { id: crypto.randomUUID(), ...payload };
-  write([...teachers, teacher]);
-  return simulateLatency(teacher);
+  const { data } = await api.post<Teacher>("/teachers", payload);
+  return data;
 }
 
-export async function deleteTeacher(id: string): Promise<void> {
-  write(read().filter((t) => t.id !== id));
-  return simulateLatency(undefined);
+export async function deleteTeacher(id: number): Promise<void> {
+  await api.delete(`/teachers/${id}`);
 }
 
-function readAttendance(): Record<string, Record<string, boolean>> {
-  try {
-    return JSON.parse(localStorage.getItem(ATTENDANCE_KEY) ?? "{}");
-  } catch {
-    return {};
-  }
+export async function uploadTeacherPhoto(id: number, photo: Blob): Promise<Teacher> {
+  const form = new FormData();
+  form.append("file", photo, "photo.jpg");
+  const { data } = await api.post<Teacher>(`/teachers/${id}/photo`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
 }
 
-function writeAttendance(data: Record<string, Record<string, boolean>>): void {
-  localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(data));
+export async function fetchTeacherPhotoUrl(id: number): Promise<string> {
+  const { data } = await api.get(`/teachers/${id}/photo`, { responseType: "blob" });
+  return URL.createObjectURL(data);
 }
 
-export async function getTeacherAttendance(date: string): Promise<Record<string, boolean>> {
-  return simulateLatency(readAttendance()[date] ?? {});
+export async function getTeacherAttendance(date: string): Promise<Record<number, boolean>> {
+  const { data } = await api.get<{ teacher_id: number; is_present: boolean }[]>(
+    "/teachers/attendance/today",
+    { params: { date } },
+  );
+  return Object.fromEntries(data.map((row) => [row.teacher_id, row.is_present]));
 }
 
 export async function setTeacherPresent(
-  teacherId: string,
+  teacherId: number,
   date: string,
   present: boolean,
 ): Promise<void> {
-  const all = readAttendance();
-  all[date] = { ...(all[date] ?? {}), [teacherId]: present };
-  writeAttendance(all);
-  return simulateLatency(undefined);
+  await api.put(`/teachers/${teacherId}/attendance`, { is_present: present }, { params: { date } });
 }
