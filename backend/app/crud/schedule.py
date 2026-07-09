@@ -6,13 +6,29 @@ l'assignation de la caméra d'une séance est modifiable via l'API.
 """
 from sqlalchemy.orm import Session
 
+from app.models.enums import SessionType
 from app.models.schedule import Schedule
-from app.schemas.schedule import ScheduleUpdate
+from app.schemas.schedule import ScheduleCreate, ScheduleUpdate
 
 
 def list_schedules(db: Session) -> list[Schedule]:
     """Retourne tous les créneaux, ordonnés par heure de début."""
     return db.query(Schedule).order_by(Schedule.start_time).all()
+
+
+def create_schedule(db: Session, data: ScheduleCreate) -> Schedule:
+    """Crée un créneau ("class plan" créé depuis le frontend)."""
+    schedule = Schedule(
+        session_number=0,
+        name=data.name,
+        start_time=data.start_time,
+        end_time=data.end_time,
+        session_type=SessionType.SESSION,
+    )
+    db.add(schedule)
+    db.commit()
+    db.refresh(schedule)
+    return schedule
 
 
 def get_schedule(db: Session, schedule_pk: int) -> Schedule | None:
