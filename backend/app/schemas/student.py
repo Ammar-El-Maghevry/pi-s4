@@ -31,6 +31,9 @@ class StudentUpdate(BaseModel):
 class StudentRead(StudentBase):
     """Représentation renvoyée par l'API."""
     id: int
+    # Classe auto-assignee a la creation/mise a jour (voir crud/student.py) ;
+    # non modifiable directement, derivee du departement.
+    class_name: str | None = None
     photo_path: str | None = None
     # Indique si l'embedding facial a déjà été calculé (booléen dérivé).
     has_face_embedding: bool = False
