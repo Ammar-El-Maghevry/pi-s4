@@ -64,8 +64,8 @@ def list_students(
 
 
 def create_student(db: Session, data: StudentCreate) -> Student:
-    """Crée un nouvel étudiant (sans embedding facial à ce stade)."""
-    student = Student(**data.model_dump())
+    """Crée un nouvel étudiant (sans embedding facial à ce stade), avec sa classe auto-assignee."""
+    student = Student(**data.model_dump(), class_name=_assign_class_name(db, data.department))
     db.add(student)
     db.commit()
     db.refresh(student)
@@ -75,8 +75,12 @@ def create_student(db: Session, data: StudentCreate) -> Student:
 def update_student(db: Session, student: Student, data: StudentUpdate) -> Student:
     """Met à jour un étudiant avec uniquement les champs fournis."""
     # `exclude_unset=True` : on ignore les champs non transmis dans la requête.
-    for field, value in data.model_dump(exclude_unset=True).items():
+    fields = data.model_dump(exclude_unset=True)
+    for field, value in fields.items():
         setattr(student, field, value)
+    # Le departement a change : recalcule la classe assignee en consequence.
+    if "department" in fields:
+        student.class_name = _assign_class_name(db, student.department)
     db.commit()
     db.refresh(student)
     return student
@@ -99,7 +103,16 @@ def set_student_photo(
     return student
 
 
-def list_face_candidates(db: Session) -> list[tuple[int, list[float]]]:
-    """Retourne (id, embedding) pour tous les etudiants enroles (utilise par la reconnaissance en direct)."""
-    rows = db.query(Student.id, Student.face_embedding).filter(Student.face_embedding.isnot(None)).all()
-    return [(student_id, list(embedding)) for student_id, embedding in rows]
+def list_face_candidates(
+    db: Session, class_name: str | None = None
+) -> list[tuple[int, list[float]]]:
+    """
+    Retourne (id, embedding) pour les etudiants enroles, utilise par la
+    reconnaissance en direct. Restreint a `class_name` si fourni (la seance
+    n'accepte alors que les etudiants de sa classe assignee) ; sinon, tous les
+    etudiants enroles sont candidats.
+    """
+    query = db.query(Student.id, Student.face_embedding).filter(Student.face_embedding.isnot(None))
+    if class_name is not None:
+        query = query.filter(Student.class_name == class_name)
+    return [(student_id, list(embedding)) for student_id, embedding in query.all()]
