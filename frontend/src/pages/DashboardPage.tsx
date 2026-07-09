@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchDashboardSummary } from "../api/dashboard";
 import { listAttendanceResults } from "../api/attendance";
 import { listClassPlans } from "../api/schedules";
+import { listStudents } from "../api/students";
 import { getTeacherAttendance, listTeachers } from "../api/teachers";
 import { StatCard } from "../components/StatCard";
 import { TableEmpty, TableLoading } from "../components/TableStates";
@@ -12,6 +13,7 @@ import {
   AttendanceStatus,
   type DashboardSummary,
   type ScheduleWithExtras,
+  type Student,
   type Teacher,
 } from "../lib/types";
 
