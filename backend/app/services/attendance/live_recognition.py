@@ -4,16 +4,19 @@ Boucle de reconnaissance en direct.
 À intervalle fixe, pour chaque caméra téléphone connectée et actuellement
 assignée à une séance en cours (heure courante dans le créneau), on prélève sa
 dernière frame reçue, on y détecte les visages, on les compare aux étudiants
-enrôlés et on enregistre une ENTRÉE pour tout étudiant reconnu.
+enrôlés et on enregistre une ENTRÉE pour tout étudiant reconnu — une seule par
+étudiant par séance (voir `_marked_sessions`).
 
-Une seule ENTRÉE suffit par étudiant par jour : `services/attendance` traite un
-intervalle sans SORTIE comme une présence qui court jusqu'à la fin du créneau
-(voir `intervals.py`), donc pas besoin de suivre la personne en continu pour la
-compter présente sur toute la séance. Un cache mémoire (`_marked_today`) évite
-de ré-insérer un évènement à chaque cycle pour la même personne.
+Dès que le créneau d'une séance se termine, on enregistre aussitôt une SORTIE
+pour chaque étudiant marqué présent à cette séance (`_close_finished_sessions`).
+C'est nécessaire : `intervals.py` traite une entrée sans sortie comme une
+présence qui court jusqu'à la fin de N'IMPORTE QUELLE fenêtre évaluée ensuite —
+sans cette clôture, un étudiant entré en séance 1 apparaîtrait automatiquement
+présent à toutes les séances suivantes de la journée.
 
 Hypothèse simplificatrice : un seul process uvicorn (déjà posée par
-`services/camera/webrtc.py`) donc un dict en mémoire process-local suffit.
+`services/camera/webrtc.py`) donc des dicts/sets en mémoire process-local
+suffisent (`_marked_sessions`, `_closed_sessions`).
 
 Le reste — détection/tracking multi-visages sophistiqués, franchissement de
 ligne, empreinte pour les enseignants — n'existe pas : seuls les étudiants ont
@@ -42,8 +45,10 @@ logger = logging.getLogger("app")
 # assez lent pour ne pas saturer un CPU unique avec de l'inférence InsightFace.
 _TICK_SECONDS = 3.0
 
-# student_id -> dernier jour où une ENTRÉE a été enregistrée (évite le spam).
-_marked_today: dict[int, date] = {}
+# (student_id, schedule_id) -> jour où l'ENTRÉE a été enregistrée (évite le spam).
+_marked_sessions: dict[tuple[int, int], date] = {}
+# (schedule_id, jour) déjà clôturés (SORTIE écrite pour tous les présents).
+_closed_sessions: set[tuple[int, date]] = set()
 
 _task: asyncio.Task | None = None
 
@@ -64,7 +69,8 @@ def _active_session(db, camera_id: int, now: datetime):
 def _process_camera(db, camera: Camera, now: datetime) -> None:
     if camera.source_type != CameraSourceType.PHONE or not camera.is_active or not camera.webrtc_token:
         return
-    if _active_session(db, camera.id, now) is None:
+    schedule = _active_session(db, camera.id, now)
+    if schedule is None:
         return
 
     frame = get_latest_frame_bgr(camera.webrtc_token)
@@ -89,7 +95,8 @@ def _process_camera(db, camera: Camera, now: datetime) -> None:
         if match is None:
             continue
         student_id, score = match
-        if _marked_today.get(student_id) == today:
+        key = (student_id, schedule.id)
+        if _marked_sessions.get(key) == today:
             continue
 
         crud_event.create_event(
@@ -101,9 +108,32 @@ def _process_camera(db, camera: Camera, now: datetime) -> None:
                 camera_id=str(camera.id),
             ),
         )
-        _marked_today[student_id] = today
+        _marked_sessions[key] = today
         compute_student_date(db, student_id, today)
         db.commit()
+
+
+def _close_finished_sessions(db, now: datetime) -> None:
+    """Ecrit une SORTIE pour chaque etudiant marque present a une seance dont le creneau vient de se terminer."""
+    today = now.date()
+    now_time = now.time()
+    for schedule in crud_schedule.list_schedules(db):
+        if schedule.session_type != SessionType.SESSION or schedule.end_time > now_time:
+            continue
+        close_key = (schedule.id, today)
+        if close_key in _closed_sessions:
+            continue
+        _closed_sessions.add(close_key)
+
+        for (student_id, schedule_id), marked_date in list(_marked_sessions.items()):
+            if schedule_id != schedule.id or marked_date != today:
+                continue
+            crud_event.create_event(
+                db,
+                AttendanceEventCreate(student_id=student_id, event_type=EventType.EXIT),
+            )
+            compute_student_date(db, student_id, today)
+            db.commit()
 
 
 def _tick() -> None:
@@ -112,6 +142,7 @@ def _tick() -> None:
         now = datetime.now()
         for camera in crud_camera.list_cameras(db, limit=500):
             _process_camera(db, camera, now)
+        _close_finished_sessions(db, now)
     finally:
         db.close()
 

@@ -112,7 +112,7 @@ export function DashboardPage() {
                 const total = summary?.total_students ?? 0;
                 const present = presentBySchedule[session.id] ?? 0;
                 const ratio = total > 0 ? present / total : 0;
-                const isDone = timeStringToMinutes(session.end_time) < now;
+                const isDone = timeStringToMinutes(session.end_time) <= now;
                 return (
                   <tr key={session.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3 font-medium">{session.name}</td>
