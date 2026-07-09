@@ -7,6 +7,12 @@ dernière frame reçue, on y détecte les visages, on les compare aux étudiants
 enrôlés et on enregistre une ENTRÉE pour tout étudiant reconnu — une seule par
 étudiant par séance (voir `_marked_sessions`).
 
+Un visage non reconnu comme étudiant est ensuite comparé aux enseignants
+enrôlés : un enseignant n'étant pas rattaché à une classe (il n'a donc pas de
+notion d'entrée/sortie par séance comme un étudiant), sa présence est un simple
+drapeau présent/absent du jour (`teacher_attendance`), positionné dès qu'il est
+reconnu par la caméra d'une séance en cours (voir `_marked_teachers`).
+
 Dès que le créneau d'une séance se termine, on enregistre aussitôt une SORTIE
 pour chaque étudiant ayant un intervalle encore ouvert avant la fin de ce
 créneau (`_close_finished_sessions`, dérivé des évènements en base — pas d'un
