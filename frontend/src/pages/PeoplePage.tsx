@@ -161,15 +161,16 @@ export function PeoplePage() {
                 <th className="px-5 py-3 font-medium">Student ID</th>
                 <th className="px-5 py-3 font-medium">Email</th>
                 <th className="px-5 py-3 font-medium">Department</th>
+                <th className="px-5 py-3 font-medium">Class</th>
                 <th className="px-5 py-3 font-medium">Live status</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <TableLoading colSpan={7} />
+                <TableLoading colSpan={8} />
               ) : students.length === 0 ? (
-                <TableEmpty colSpan={7} />
+                <TableEmpty colSpan={8} />
               ) : (
                 students.map((s) => (
                   <tr key={s.id} className="border-b border-border last:border-0">
