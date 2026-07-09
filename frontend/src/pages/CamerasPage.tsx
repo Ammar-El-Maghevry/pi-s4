@@ -157,7 +157,7 @@ export function CamerasPage() {
                           : "border-border bg-bg-inset text-text-muted"
                       }`}
                     >
-                      {c.is_active ? "Active" : "Inactive"}
+                      {c.is_active ? "Enabled" : "Disabled"}
                     </span>
                   </td>
                   <td className="px-5 py-3">
