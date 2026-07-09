@@ -39,6 +39,7 @@ from app.crud import attendance_event as crud_event
 from app.crud import camera as crud_camera
 from app.crud import schedule as crud_schedule
 from app.crud import student as crud_student
+from app.crud import teacher as crud_teacher
 from app.database import SessionLocal
 from app.models.camera import Camera
 from app.models.enums import CameraSourceType, EventType, SessionType

@@ -60,6 +60,8 @@ _TICK_SECONDS = 3.0
 _marked_sessions: dict[tuple[int, int], date] = {}
 # (schedule_id, jour) déjà clôturés (SORTIE écrite pour tous les présents).
 _closed_sessions: set[tuple[int, date]] = set()
+# teacher_id -> jour où sa présence a déjà été positionnée (évite le spam).
+_marked_teachers: dict[int, date] = {}
 
 _task: asyncio.Task | None = None
 
