@@ -160,6 +160,13 @@ class CameraRead(BaseModel):
         """Masque les identifiants avant de renvoyer l'URL."""
         return mask_source_url(value) if isinstance(value, str) else value
 
+    @model_validator(mode="after")
+    def _set_pairing_link(self):
+        """Calcule le lien d'appairage a partir du jeton, cote serveur."""
+        if self.webrtc_token:
+            self.pairing_link = f"{settings.PHONE_PAIRING_BASE_URL}/phone-camera/{self.webrtc_token}"
+        return self
+
 
 class CameraTestResult(BaseModel):
     """Résultat d'un test de connexion à une caméra."""
