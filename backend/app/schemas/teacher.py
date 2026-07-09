@@ -37,7 +37,9 @@ class TeacherAttendanceRead(BaseModel):
     teacher_id: int
     attendance_date: date
     is_present: bool
+    # "manual" (bouton People) ou "camera" (reconnaissance en direct).
     source: str
+    marked_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

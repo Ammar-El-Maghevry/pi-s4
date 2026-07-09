@@ -67,14 +67,9 @@ def list_face_candidates(db: Session) -> list[tuple[int, list[float]]]:
     return [(teacher_id, list(embedding)) for teacher_id, embedding in rows]
 
 
-def get_attendance_for_date(db: Session, on_date: date) -> dict[int, bool]:
-    """Retourne {teacher_id: present} pour tous les enseignants ayant un statut ce jour-là."""
-    rows = (
-        db.query(TeacherAttendance.teacher_id, TeacherAttendance.is_present)
-        .filter(TeacherAttendance.attendance_date == on_date)
-        .all()
-    )
-    return {teacher_id: is_present for teacher_id, is_present in rows}
+def list_attendance_for_date(db: Session, on_date: date) -> list[TeacherAttendance]:
+    """Retourne les lignes de présence de tous les enseignants pour une date donnée."""
+    return db.query(TeacherAttendance).filter(TeacherAttendance.attendance_date == on_date).all()
 
 
 def set_attendance(
