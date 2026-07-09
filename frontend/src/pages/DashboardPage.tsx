@@ -65,6 +65,8 @@ export function DashboardPage() {
   const activeSessions = schedules.filter(
     (s) => timeStringToMinutes(s.start_time) <= now && now <= timeStringToMinutes(s.end_time),
   ).length;
+  const teachersPresent = teachers.filter((t) => teacherAttendance[t.id]).length;
+  const teachersAbsent = teachers.length - teachersPresent;
 
   return (
     <div className="flex flex-col gap-6">
