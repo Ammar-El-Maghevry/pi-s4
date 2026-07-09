@@ -2,12 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { listAttendanceResults } from "../api/attendance";
 import { listClassPlans } from "../api/schedules";
 import { listStudents } from "../api/students";
+import { listTeacherAttendance, listTeachers } from "../api/teachers";
 import { StatusPill } from "../components/StatusPill";
 import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
-import { formatTimeOnly } from "../lib/time";
-import type { AttendanceResult, ScheduleWithExtras, Student } from "../lib/types";
+import { formatTimeOnly, todayIso } from "../lib/time";
+import type {
+  AttendanceResult,
+  ScheduleWithExtras,
+  Student,
+  Teacher,
+  TeacherAttendanceRecord,
+} from "../lib/types";
 import { AttendanceStatus } from "../lib/types";
 
 type FilterChip = "ALL" | AttendanceStatus;
@@ -19,20 +26,27 @@ export function AttendancePage() {
   const [results, setResults] = useState<AttendanceResult[]>([]);
   const [students, setStudents] = useState<Record<number, Student>>({});
   const [schedules, setSchedules] = useState<Record<number, ScheduleWithExtras>>({});
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teacherAttendance, setTeacherAttendance] = useState<TeacherAttendanceRecord[]>([]);
   const [filter, setFilter] = useState<FilterChip>("ALL");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [resultData, studentData, scheduleData] = await Promise.all([
-          listAttendanceResults(),
-          listStudents(),
-          listClassPlans(),
-        ]);
+        const [resultData, studentData, scheduleData, teacherData, teacherAttendanceData] =
+          await Promise.all([
+            listAttendanceResults(),
+            listStudents(),
+            listClassPlans(),
+            listTeachers(),
+            listTeacherAttendance(todayIso()),
+          ]);
         setResults(resultData);
         setStudents(Object.fromEntries(studentData.map((s) => [s.id, s])));
         setSchedules(Object.fromEntries(scheduleData.map((s) => [s.id, s])));
+        setTeachers(teacherData);
+        setTeacherAttendance(teacherAttendanceData);
       } catch (err) {
         showError(apiErrorMessage(err));
       } finally {
@@ -42,6 +56,11 @@ export function AttendancePage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const teacherAttendanceByTeacher = useMemo(
+    () => Object.fromEntries(teacherAttendance.map((row) => [row.teacher_id, row])),
+    [teacherAttendance],
+  );
 
   const filtered = useMemo(
     () => (filter === "ALL" ? results : results.filter((r) => r.status === filter)),
@@ -70,6 +89,9 @@ export function AttendancePage() {
       </div>
 
       <div className="rounded-xl border border-border bg-bg-elevated">
+        <div className="border-b border-border px-5 py-3">
+          <h2 className="text-base font-semibold">Students</h2>
+        </div>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
