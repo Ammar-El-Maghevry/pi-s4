@@ -24,3 +24,16 @@ class ScheduleRead(BaseModel):
 class ScheduleUpdate(BaseModel):
     """Données pour assigner (ou retirer) la caméra d'une séance."""
     camera_id: int | None = None
+
+
+class ScheduleCreate(BaseModel):
+    """
+    Données pour créer un créneau depuis le frontend ("class plan").
+
+    Seuls `name`, `start_time`, `end_time` sont persistés côté backend ;
+    teacher/room/day restent des "extras" gérés côté frontend (voir
+    frontend/src/api/schedules.ts) tant que le modèle n'a pas ces colonnes.
+    """
+    name: str
+    start_time: time
+    end_time: time
