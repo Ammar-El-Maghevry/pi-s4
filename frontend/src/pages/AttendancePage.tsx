@@ -133,6 +133,55 @@ export function AttendancePage() {
           </tbody>
         </table>
       </div>
+
+      <div className="rounded-xl border border-border bg-bg-elevated">
+        <div className="border-b border-border px-5 py-3">
+          <h2 className="text-base font-semibold">Teachers — today</h2>
+        </div>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
+              <th className="px-5 py-3 font-medium">Teacher</th>
+              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">Marked by</th>
+              <th className="px-5 py-3 font-medium">Marked at</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <TableLoading colSpan={4} />
+            ) : teachers.length === 0 ? (
+              <TableEmpty colSpan={4} />
+            ) : (
+              teachers.map((t) => {
+                const record = teacherAttendanceByTeacher[t.id];
+                return (
+                  <tr key={t.id} className="border-b border-border last:border-0">
+                    <td className="px-5 py-3 font-medium">{t.full_name}</td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-data ${
+                          record?.is_present
+                            ? "border-present/30 bg-present/10 text-present"
+                            : "border-absent/30 bg-absent/10 text-absent"
+                        }`}
+                      >
+                        {record?.is_present ? "PRESENT" : "ABSENT"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-text-muted">
+                      {record ? (record.source === "camera" ? "Camera" : "Manual") : "—"}
+                    </td>
+                    <td className="px-5 py-3 font-data text-text-muted">
+                      {formatTimeOnly(record?.marked_at ?? null)}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
