@@ -113,6 +113,7 @@ export function SchedulesPage() {
             <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
               <th className="px-5 py-3 font-medium">Session</th>
               <th className="px-5 py-3 font-medium">Teacher</th>
+              <th className="px-5 py-3 font-medium">Class</th>
               <th className="px-5 py-3 font-medium">Room</th>
               <th className="px-5 py-3 font-medium">Day</th>
               <th className="px-5 py-3 font-medium">Time</th>
@@ -123,14 +124,35 @@ export function SchedulesPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <TableLoading colSpan={8} />
+              <TableLoading colSpan={9} />
             ) : schedules.length === 0 ? (
-              <TableEmpty colSpan={8} />
+              <TableEmpty colSpan={9} />
             ) : (
               schedules.map((s) => (
                 <tr key={s.id} className="border-b border-border last:border-0">
                   <td className="px-5 py-3 font-medium">{s.name}</td>
                   <td className="px-5 py-3 text-text-muted">{s.teacher}</td>
+                  <td className="px-5 py-3">
+                    {s.isLocalOnly ? (
+                      <span className="text-xs text-text-muted" title="Local-only class plans can't have a class assigned">
+                        —
+                      </span>
+                    ) : (
+                      <select
+                        value={s.class_name ?? ""}
+                        disabled={savingClassFor === s.id}
+                        onChange={(e) => handleClassChange(s.id, e.target.value)}
+                        className="w-full rounded-lg border border-border bg-bg-inset px-2 py-1.5 text-xs outline-none focus:border-accent disabled:opacity-50"
+                      >
+                        <option value="">Unassigned</option>
+                        {classOptions.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-text-muted">{s.room}</td>
                   <td className="px-5 py-3 text-text-muted">{s.day}</td>
                   <td className="px-5 py-3 font-data text-text-muted">

@@ -199,13 +199,15 @@ export function SchedulesPage() {
         </table>
         <p className="border-t border-border px-5 py-2 text-xs text-text-muted">
           Teacher, room, day and check windows are stored locally in this browser — the backend
-          schedule model doesn't have these fields yet. The camera assignment is real and shared
-          across all admins.
+          schedule model doesn't have these fields yet. The camera and class assignments are real
+          and shared across all admins. Only students in the assigned class count toward this
+          session's roster and are recognized live.
         </p>
       </div>
 
       {isModalOpen && (
         <NewClassPlanModal
+          classOptions={classOptions}
           onClose={() => setIsModalOpen(false)}
           onCreated={() => {
             setIsModalOpen(false);
