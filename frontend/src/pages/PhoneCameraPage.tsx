@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPhoneCameraInfo, sendOffer, stopPhoneCamera } from "../api/phoneCamera";
+import { useLanguage } from "../context/LanguageContext";
 import { apiErrorMessage } from "../lib/api";
+import type { Translations } from "../lib/i18n";
 import type { PhoneCameraInfo } from "../lib/types";
 
 type Status =
@@ -35,6 +37,7 @@ async function waitForIceGatheringComplete(pc: RTCPeerConnection): Promise<void>
 
 export function PhoneCameraPage() {
   const { token } = useParams<{ token: string }>();
+  const { t } = useLanguage();
   const [status, setStatus] = useState<Status>("loading-info");
   const [info, setInfo] = useState<PhoneCameraInfo | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export function PhoneCameraPage() {
       pc.addEventListener("connectionstatechange", () => {
         if (pc.connectionState === "connected") setStatus("connected");
         if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-          setErrorMessage("Connection lost.");
+          setErrorMessage(t.phoneCamera.connectionLost);
           setStatus("error");
         }
       });
@@ -100,7 +103,7 @@ export function PhoneCameraPage() {
       await pc.setRemoteDescription(answer as RTCSessionDescriptionInit);
     } catch (err) {
       stopEverything();
-      setErrorMessage(err instanceof DOMException ? cameraErrorMessage(err) : apiErrorMessage(err));
+      setErrorMessage(err instanceof DOMException ? cameraErrorMessage(err, t) : apiErrorMessage(err));
       setStatus("error");
     }
   }
@@ -114,29 +117,24 @@ export function PhoneCameraPage() {
   return (
     <div className="flex min-h-screen flex-col items-center gap-4 bg-bg p-4 text-text">
       <div className="flex w-full max-w-md flex-col gap-4">
-        <h1 className="text-center text-xl font-semibold">Presence.sys — Phone camera</h1>
+        <h1 className="text-center text-xl font-semibold">{t.phoneCamera.headerTitle}</h1>
 
         {!window.isSecureContext && (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
-            This page was loaded over plain HTTP. Most mobile browsers block camera access
-            unless the page is served over HTTPS (or opened as "localhost"), so starting the
-            camera below may fail.
+            {t.phoneCamera.httpWarning}
           </div>
         )}
 
-        {status === "loading-info" && <p className="text-center text-text-muted">Loading…</p>}
+        {status === "loading-info" && <p className="text-center text-text-muted">{t.common.loading}</p>}
 
         {status === "not-found" && (
-          <p className="text-center text-absent">
-            This link is invalid or the camera no longer exists.
-          </p>
+          <p className="text-center text-absent">{t.phoneCamera.notFound}</p>
         )}
 
         {status !== "loading-info" && status !== "not-found" && (
           <>
             <p className="text-center text-text-muted">
-              Pairing with <span className="font-medium text-text">{info?.name}</span>
-              {info?.location ? ` — ${info.location}` : ""}
+              {t.phoneCamera.pairingWith({ name: info?.name ?? "", location: info?.location ?? "" })}
             </p>
 
             <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border border-border bg-bg-inset">
@@ -150,14 +148,14 @@ export function PhoneCameraPage() {
               </div>
             )}
 
-            <p className="text-center text-sm text-text-muted">{statusLabel(status)}</p>
+            <p className="text-center text-sm text-text-muted">{statusLabel(status, t)}</p>
 
             {status === "connected" ? (
               <button
                 onClick={handleStop}
                 className="rounded-lg border border-absent/50 px-4 py-2 text-sm font-medium text-absent hover:bg-absent/10"
               >
-                Stop
+                {t.phoneCamera.stopBtn}
               </button>
             ) : (
               <button
@@ -166,8 +164,8 @@ export function PhoneCameraPage() {
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
               >
                 {status === "requesting-camera" || status === "connecting"
-                  ? "Connecting…"
-                  : "Start streaming"}
+                  ? t.phoneCamera.connecting
+                  : t.phoneCamera.startBtn}
               </button>
             )}
           </>
@@ -177,25 +175,25 @@ export function PhoneCameraPage() {
   );
 }
 
-function statusLabel(status: Status): string {
+function statusLabel(status: Status, t: Translations): string {
   switch (status) {
     case "idle":
-      return "Not streaming";
+      return t.phoneCamera.statusIdle;
     case "requesting-camera":
-      return "Requesting camera access…";
+      return t.phoneCamera.statusRequestingCamera;
     case "connecting":
-      return "Connecting to the server…";
+      return t.phoneCamera.statusConnecting;
     case "connected":
-      return "Streaming — this camera is now live";
+      return t.phoneCamera.statusConnected;
     case "error":
-      return "Something went wrong";
+      return t.phoneCamera.statusError;
     default:
       return "";
   }
 }
 
-function cameraErrorMessage(err: DOMException): string {
-  if (err.name === "NotAllowedError") return "Camera access was denied.";
-  if (err.name === "NotFoundError") return "No camera was found on this device.";
-  return err.message || "Could not access the camera.";
+function cameraErrorMessage(err: DOMException, t: Translations): string {
+  if (err.name === "NotAllowedError") return t.phoneCamera.errNotAllowed;
+  if (err.name === "NotFoundError") return t.phoneCamera.errNotFound;
+  return err.message || t.phoneCamera.errGeneric;
 }
