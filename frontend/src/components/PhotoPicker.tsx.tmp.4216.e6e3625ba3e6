@@ -141,7 +141,7 @@ export function PhotoPicker({
               onClick={() => onChange(null)}
               className="rounded-lg border border-border px-3 py-1.5 text-sm text-text-muted hover:text-text"
             >
-              Retake
+              {t.common.retake}
             </button>
           )
         ) : mode === "camera" && !cameraError ? (
@@ -150,7 +150,7 @@ export function PhotoPicker({
             onClick={handleCaptureFrame}
             className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-black hover:opacity-90"
           >
-            Capture
+            {t.photoPicker.capture}
           </button>
         ) : null}
       </div>

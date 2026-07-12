@@ -117,7 +117,7 @@ export function PhotoPicker({
           <img src={preview} alt="Captured" className="h-full w-full object-contain" />
         ) : mode === "upload" ? (
           <label className="flex cursor-pointer flex-col items-center gap-2 text-sm text-text-muted">
-            <span>Click to choose an image (JPEG/PNG/WebP)</span>
+            <span>{t.photoPicker.clickToChoose}</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
