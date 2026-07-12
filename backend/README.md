@@ -20,7 +20,7 @@ rapports).
 - Python 3.11+
 - Docker (pour PostgreSQL avec pgvector)
 
-## Installation
+## Installation~
 
 ```bash
 # 1) Environnement virtuel
