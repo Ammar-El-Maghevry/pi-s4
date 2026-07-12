@@ -365,6 +365,131 @@ function NewClassPlanModal({
   );
 }
 
+function ImportSchedulesModal({
+  onClose,
+  onImported,
+}: {
+  onClose: () => void;
+  onImported: () => void;
+}) {
+  const { showError, showSuccess } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ScheduleImportResult | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const data = await importClassPlans(file);
+      setResult(data);
+      onImported();
+      if (data.created.length > 0) {
+        showSuccess(
+          `Imported ${data.created.length} session${data.created.length === 1 ? "" : "s"}`,
+        );
+      }
+      if (data.invalid > 0) {
+        showError(`${data.invalid} row${data.invalid === 1 ? "" : "s"} skipped — see details below`);
+      }
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Import weekly plan" onClose={onClose}>
+      {!result ? (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <p className="text-sm text-text-muted">
+            Upload the week's timetable and the system builds the sessions itself: a PDF grid
+            (days × time slots, one exported timetable page — e.g. printed from Excel), or a
+            CSV/Excel sheet with one row per session (<code>name</code>, <code>teacher</code>,{" "}
+            <code>room</code>, <code>day</code>, <code>start_time</code>, <code>end_time</code>).
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.xlsx,.pdf"
+            required
+            className="w-full rounded-lg border border-border bg-bg-inset px-3 py-2 text-sm outline-none file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-1.5 file:text-accent"
+          />
+          {error && <p className="text-sm text-absent">{error}</p>}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
+          >
+            {isSubmitting ? "Importing…" : "Import"}
+          </button>
+        </form>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <Stat label="Sessions created" value={result.created.length} />
+            <Stat label="Rows skipped" value={result.invalid} />
+          </div>
+
+          {result.created.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
+                Created
+              </p>
+              <ul className="max-h-48 overflow-y-auto rounded-lg border border-border text-sm">
+                {result.created.map((s) => (
+                  <li key={s.schedule_id} className="border-b border-border px-3 py-2 last:border-0">
+                    <span className="font-medium">{s.name}</span>{" "}
+                    <span className="text-text-muted">
+                      — {s.day} {s.start_time}–{s.end_time} · {s.teacher} · {s.room}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.errors.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
+                Skipped rows
+              </p>
+              <ul className="max-h-32 overflow-y-auto rounded-lg border border-border text-xs">
+                {result.errors.map((e) => (
+                  <li key={e.row} className="border-b border-border px-3 py-1.5 last:border-0">
+                    Row {e.row}: {e.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
+          >
+            Done
+          </button>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-border bg-bg-inset px-3 py-2">
+      <div className="font-data text-lg font-semibold">{value}</div>
+      <div className="text-xs text-text-muted">{label}</div>
+    </div>
+  );
+}
+
 function TextField({
   label,
   value,
