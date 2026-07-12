@@ -114,18 +114,35 @@ def _parse_offset(value: str, default: int) -> int | None:
 
 def import_schedules(db: Session, content: bytes, filename: str) -> ImportResult:
     """
-    Importe des seances depuis un fichier CSV/XLSX couvrant la semaine (une
-    ligne par seance). Cree une ligne en base par seance valide et renvoie,
-    pour chacune, teacher/room/day/fenetres de pointage a persister cote
-    frontend.
+    Importe des seances couvrant la semaine, depuis un CSV/XLSX (une ligne
+    par seance) ou un PDF grille (voir module docstring). Cree une ligne en
+    base par seance valide et renvoie, pour chacune, teacher/room/day/
+    fenetres de pointage a persister cote frontend.
     """
     if len(content) > MAX_IMPORT_BYTES:
-        raise ScheduleImportError("Fichier trop volumineux (5 Mo maximum).")
+        raise ScheduleImportError("Fichier trop volumineux (10 Mo maximum).")
 
-    try:
-        rows = read_rows(content, filename, _HEADER_ALIASES)
-    except SpreadsheetFormatError as exc:
-        raise ScheduleImportError(str(exc)) from exc
+    if filename.lower().endswith(".pdf"):
+        try:
+            grid_sessions = extract_sessions_from_pdf(content)
+        except GridPdfParseError as exc:
+            raise ScheduleImportError(str(exc)) from exc
+        rows = [
+            {
+                "name": s.name,
+                "teacher": s.teacher,
+                "room": s.room,
+                "day": s.day,
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+            }
+            for s in grid_sessions
+        ]
+    else:
+        try:
+            rows = read_rows(content, filename, _HEADER_ALIASES)
+        except SpreadsheetFormatError as exc:
+            raise ScheduleImportError(str(exc)) from exc
 
     result = ImportResult(total_rows=len(rows))
 
