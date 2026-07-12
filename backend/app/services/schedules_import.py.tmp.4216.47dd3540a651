@@ -58,8 +58,9 @@ _HEADER_ALIASES = {
 DEFAULT_CHECK_IN_OFFSET = 15
 DEFAULT_CHECK_OUT_OFFSET = 15
 
-# Fichier texte/tableur, pas de photos : une limite bien plus basse que l'import etudiants suffit.
-MAX_IMPORT_BYTES = 5 * 1024 * 1024  # 5 Mo
+# Fichier texte/tableur/PDF, pas de photos individuelles : une limite plus basse
+# que l'import etudiants suffit (les PDF scannes restent rares sur un gabarit d'une page).
+MAX_IMPORT_BYTES = 10 * 1024 * 1024  # 10 Mo
 
 
 class ScheduleImportError(Exception):

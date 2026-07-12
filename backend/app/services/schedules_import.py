@@ -1,11 +1,15 @@
 """
-Import en masse de l'emploi du temps depuis un fichier CSV ou Excel (.xlsx)
-couvrant une semaine complete : une ligne = une seance.
+Import en masse de l'emploi du temps couvrant une semaine complete, depuis :
+- un fichier CSV ou Excel (.xlsx), une ligne = une seance ; ou
+- un PDF "grille" (gabarit SupNum : jours en lignes x creneaux horaires en
+  colonnes, voir `app/services/schedule_grid_pdf.py`).
 
-Colonnes attendues : "name", "teacher", "room", "day", "start_time",
+Colonnes CSV/XLSX attendues : "name", "teacher", "room", "day", "start_time",
 "end_time" (obligatoires), "class_name", "check_in_offset_minutes",
 "check_out_offset_minutes" (optionnelles, alias francais/anglais tolérés,
-voir `_HEADER_ALIASES`).
+voir `_HEADER_ALIASES`). Le PDF grille produit directement ces memes champs
+(sans class_name ni fenetres de pointage, qui prennent leurs valeurs par
+defaut) : les deux sources convergent vers le meme traitement par ligne.
 
 Seuls name/start_time/end_time/class_name sont persistes cote backend (voir
 `app/models/schedule.py`) ; teacher/room/day/fenetres de pointage restent
@@ -21,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.crud import schedule as crud_schedule
 from app.schemas.schedule import ScheduleCreate
+from app.services.schedule_grid_pdf import GridPdfParseError, extract_sessions_from_pdf
 from app.services.spreadsheet import SpreadsheetFormatError, read_rows
 
 _HEADER_ALIASES = {
