@@ -138,6 +138,30 @@ export interface WebRTCAnswer {
   type: string;
 }
 
+export interface ScheduleImportRowError {
+  row: number;
+  reason: string;
+}
+
+export interface ScheduleImportCreated {
+  schedule_id: number;
+  name: string;
+  teacher: string;
+  room: string;
+  day: string;
+  start_time: string;
+  end_time: string;
+  check_in_offset_minutes: number;
+  check_out_offset_minutes: number;
+}
+
+export interface ScheduleImportResult {
+  total_rows: number;
+  created: ScheduleImportCreated[];
+  invalid: number;
+  errors: ScheduleImportRowError[];
+}
+
 export interface Schedule {
   id: number;
   session_number: number;
