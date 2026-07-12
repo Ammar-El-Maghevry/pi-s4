@@ -344,6 +344,17 @@ export function PeoplePage() {
         />
       )}
 
+      {isImportModalOpen && (
+        <ImportStudentsModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImported={() => load()}
+          onAddPhoto={(id, fullName, studentId) => {
+            setIsImportModalOpen(false);
+            openPhotoTargetFor(id, fullName, studentId);
+          }}
+        />
+      )}
+
       {photoTarget && (
         <PhotoCaptureModal
           title={`Enroll photo — ${photoTarget.full_name}`}
@@ -508,6 +519,142 @@ function AddPersonModal({
         </button>
       </form>
     </Modal>
+  );
+}
+
+function ImportStudentsModal({
+  onClose,
+  onImported,
+  onAddPhoto,
+}: {
+  onClose: () => void;
+  onImported: () => void;
+  onAddPhoto: (id: number, fullName: string, studentId: string) => void;
+}) {
+  const { showError, showSuccess } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<StudentImportResult | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const data = await importStudents(file);
+      setResult(data);
+      onImported();
+      if (data.created > 0) {
+        showSuccess(`Imported ${data.created} student${data.created === 1 ? "" : "s"}`);
+      }
+      if (data.missing_photo > 0) {
+        showError(
+          `${data.missing_photo} imported student${data.missing_photo === 1 ? " has" : "s have"} no photo — add one from the list below or later from People`,
+        );
+      }
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Import students" onClose={onClose}>
+      {!result ? (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <p className="text-sm text-text-muted">
+            Upload a CSV or Excel file with columns <code>full_name</code>, <code>student_id</code>,{" "}
+            <code>email</code>, <code>department</code>. To enroll photos at the same time, upload a
+            ZIP containing that sheet plus image files named <code>&lt;student_id&gt;.jpg</code>.
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.xlsx,.zip"
+            required
+            className="w-full rounded-lg border border-border bg-bg-inset px-3 py-2 text-sm outline-none file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-1.5 file:text-accent"
+          />
+          {error && <p className="text-sm text-absent">{error}</p>}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
+          >
+            {isSubmitting ? "Importing…" : "Import"}
+          </button>
+        </form>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+            <Stat label="Created" value={result.created} />
+            <Stat label="Duplicates" value={result.duplicates} />
+            <Stat label="Invalid rows" value={result.invalid} />
+            <Stat label="No photo" value={result.missing_photo} />
+          </div>
+
+          {result.errors.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
+                Skipped rows
+              </p>
+              <ul className="max-h-32 overflow-y-auto rounded-lg border border-border text-xs">
+                {result.errors.map((e) => (
+                  <li key={e.row} className="border-b border-border px-3 py-1.5 last:border-0">
+                    Row {e.row}: {e.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.missing_photo_students.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
+                Missing photos — enroll now or later from the People list
+              </p>
+              <ul className="max-h-48 overflow-y-auto rounded-lg border border-border text-sm">
+                {result.missing_photo_students.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between border-b border-border px-3 py-2 last:border-0"
+                  >
+                    <span>
+                      {s.full_name} <span className="text-text-muted">({s.student_id})</span>
+                    </span>
+                    <button
+                      onClick={() => onAddPhoto(s.id, s.full_name, s.student_id)}
+                      className="text-xs font-medium text-accent hover:underline"
+                    >
+                      Add photo
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
+          >
+            Done
+          </button>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-border bg-bg-inset px-3 py-2">
+      <div className="font-data text-lg font-semibold">{value}</div>
+      <div className="text-xs text-text-muted">{label}</div>
+    </div>
   );
 }
 
