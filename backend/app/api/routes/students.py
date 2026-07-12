@@ -13,12 +13,18 @@ from app.core.deps import get_current_user, get_db
 from app.crud import student as crud_student
 from app.models.user import User
 from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
+from app.schemas.student_import import (
+    StudentImportMissingPhoto,
+    StudentImportResult,
+    StudentImportRowError,
+)
 from app.services import photos
 from app.services.ai.face_embedding import (
     MultipleFacesDetected,
     NoFaceDetected,
     extract_single_face_embedding,
 )
+from app.services.students_import import StudentImportError, import_students
 
 router = APIRouter(
     prefix="/students",
