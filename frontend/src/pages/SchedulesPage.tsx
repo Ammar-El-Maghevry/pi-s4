@@ -24,6 +24,7 @@ export function SchedulesPage() {
   const [classOptions, setClassOptions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [savingCameraFor, setSavingCameraFor] = useState<number | null>(null);
   const [savingClassFor, setSavingClassFor] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
