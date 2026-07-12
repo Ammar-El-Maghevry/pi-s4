@@ -154,7 +154,7 @@ export function DashboardPage() {
                             : "border-accent/30 bg-accent-soft text-accent"
                         }`}
                       >
-                        {isDone ? "DONE" : "CHECKING"}
+                        {isDone ? t.dashboard.statusDone : t.dashboard.statusChecking}
                       </span>
                     </td>
                   </tr>
