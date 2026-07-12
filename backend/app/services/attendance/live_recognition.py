@@ -1,11 +1,12 @@
 """
 Boucle de reconnaissance en direct.
 
-À intervalle fixe, pour chaque caméra téléphone connectée et actuellement
-assignée à une séance en cours (heure courante dans le créneau), on prélève sa
-dernière frame reçue, on y détecte les visages, on les compare aux étudiants
-enrôlés et on enregistre une ENTRÉE pour tout étudiant reconnu — une seule par
-étudiant par séance (voir `_marked_sessions`).
+À intervalle fixe, pour chaque caméra active (téléphone en WebRTC ou caméra
+IP/RTSP/USB via `ip_stream.py`) actuellement assignée à une séance en cours
+(heure courante dans le créneau), on prélève sa dernière frame reçue, on y
+détecte les visages, on les compare aux étudiants enrôlés et on enregistre une
+ENTRÉE pour tout étudiant reconnu — une seule par étudiant par séance (voir
+`_marked_sessions`).
 
 Un visage non reconnu comme étudiant est ensuite comparé aux enseignants
 enrôlés : un enseignant n'étant pas rattaché à une classe (il n'a donc pas de
@@ -48,6 +49,7 @@ from app.services.ai.face_embedding import extract_all_face_embeddings, match_st
 from app.services.attendance.engine import session_window
 from app.services.attendance.intervals import _naive, build_intervals
 from app.services.attendance.service import compute_student_date
+from app.services.camera import ip_stream
 from app.services.camera.webrtc import get_latest_frame_bgr
 
 logger = logging.getLogger("app")
