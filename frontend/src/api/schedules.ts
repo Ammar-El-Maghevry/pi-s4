@@ -5,7 +5,7 @@
 // rows (and can have a camera assigned) — `readLocalSchedules` only remains
 // to surface any pre-existing plans created before this endpoint existed.
 import { api } from "../lib/api";
-import type { Schedule, ScheduleExtras, ScheduleWithExtras } from "../lib/types";
+import type { Schedule, ScheduleExtras, ScheduleImportResult, ScheduleWithExtras } from "../lib/types";
 import { SessionType } from "../lib/types";
 
 const EXTRAS_KEY = "presence.schedule_extras";
