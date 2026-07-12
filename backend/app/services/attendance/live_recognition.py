@@ -226,3 +226,4 @@ async def stop() -> None:
         with suppress(asyncio.CancelledError):
             await _task
         _task = None
+    ip_stream.stop_all()
