@@ -13,12 +13,10 @@ routes/students.py::upload_student_photo). Sinon l'etudiant est compte dans
 `missing_photo` : l'administrateur en est informe pour l'ajouter depuis la
 page People (clic sur l'avatar, deja supporte).
 """
-import csv
 import io
 import zipfile
 from dataclasses import dataclass, field
 
-import openpyxl
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -31,6 +29,7 @@ from app.services.ai.face_embedding import (
     NoFaceDetected,
     extract_single_face_embedding,
 )
+from app.services.spreadsheet import read_csv_rows, read_xlsx_rows
 
 _HEADER_ALIASES = {
     "full_name": "full_name",
@@ -89,47 +88,12 @@ class ImportResult:
     errors: list[RowError] = field(default_factory=list)
 
 
-def _normalize_header(raw: str) -> str | None:
-    return _HEADER_ALIASES.get(raw.strip().lower())
-
-
 def _rows_from_csv(content: bytes) -> list[dict[str, str]]:
-    text = content.decode("utf-8-sig", errors="replace")
-    rows = list(csv.reader(io.StringIO(text)))
-    if not rows:
-        return []
-    headers = [_normalize_header(h) for h in rows[0]]
-    result = []
-    for raw_row in rows[1:]:
-        if not any(cell.strip() for cell in raw_row):
-            continue
-        record: dict[str, str] = {}
-        for header, value in zip(headers, raw_row):
-            if header:
-                record[header] = value.strip()
-        result.append(record)
-    return result
+    return read_csv_rows(content, _HEADER_ALIASES)
 
 
 def _rows_from_xlsx(content: bytes) -> list[dict[str, str]]:
-    workbook = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
-    sheet = workbook.active
-    rows_iter = sheet.iter_rows(values_only=True)
-    try:
-        header_row = next(rows_iter)
-    except StopIteration:
-        return []
-    headers = [_normalize_header(str(h)) if h is not None else None for h in header_row]
-    result = []
-    for raw_row in rows_iter:
-        if raw_row is None or not any(cell not in (None, "") for cell in raw_row):
-            continue
-        record: dict[str, str] = {}
-        for header, value in zip(headers, raw_row):
-            if header:
-                record[header] = "" if value is None else str(value).strip()
-        result.append(record)
-    return result
+    return read_xlsx_rows(content, _HEADER_ALIASES)
 
 
 def _extract_zip(content: bytes) -> tuple[bytes, str, dict[str, tuple[bytes, str]]]:
