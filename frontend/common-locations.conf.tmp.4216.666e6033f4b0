@@ -1,0 +1,20 @@
+# Shared between the plain-HTTP (80) and HTTPS (443) server blocks in
+# nginx.conf, so the two transports can't silently drift apart.
+root /usr/share/nginx/html;
+index index.html;
+
+location /api/ {
+    # Default (1m) is too small for photo enrollment (8 MB) and bulk student
+    # imports (20 MB CSV/XLSX/ZIP) — see app/services/photos.py and
+    # app/services/students_import.py for the backend-side limits.
+    client_max_body_size 25m;
+    proxy_pass http://backend:8000/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location / {
+    try_files $uri /index.html;
+}
