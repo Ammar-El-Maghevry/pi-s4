@@ -12,13 +12,20 @@ import {
 import { listStudents } from "../api/students";
 import { Modal } from "../components/Modal";
 import { TableEmpty, TableLoading } from "../components/TableStates";
+import { useLanguage } from "../context/LanguageContext";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { formatTime } from "../lib/time";
 import type { Camera, ScheduleImportResult, ScheduleWithExtras } from "../lib/types";
+import type { Translations } from "../lib/i18n";
+
+function dayLabel(day: string, t: Translations): string {
+  return t.schedules.dayNames[day] ?? day;
+}
 
 export function SchedulesPage() {
   const { showError, showSuccess } = useToast();
+  const { t } = useLanguage();
   const [schedules, setSchedules] = useState<ScheduleWithExtras[]>([]);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [classOptions, setClassOptions] = useState<string[]>([]);
@@ -57,7 +64,7 @@ export function SchedulesPage() {
     setSavingCameraFor(scheduleId);
     try {
       await assignScheduleCamera(scheduleId, cameraId ? Number(cameraId) : null);
-      showSuccess("Camera assigned");
+      showSuccess(t.schedules.toastCameraAssigned);
       await load();
     } catch (err) {
       showError(apiErrorMessage(err));
@@ -70,7 +77,7 @@ export function SchedulesPage() {
     setSavingClassFor(scheduleId);
     try {
       await assignScheduleClass(scheduleId, className || null);
-      showSuccess("Class assigned");
+      showSuccess(t.schedules.toastClassAssigned);
       await load();
     } catch (err) {
       showError(apiErrorMessage(err));
@@ -83,7 +90,7 @@ export function SchedulesPage() {
     setDeletingId(schedule.id);
     try {
       await deleteClassPlan(schedule.id);
-      showSuccess("Class plan deleted");
+      showSuccess(t.schedules.toastPlanDeleted);
       await load();
     } catch (err) {
       showError(apiErrorMessage(err));
@@ -96,23 +103,21 @@ export function SchedulesPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Class plans</h1>
-          <p className="text-sm text-text-muted">
-            Weekly session schedule and camera check-in/out windows
-          </p>
+          <h1 className="text-2xl font-semibold">{t.schedules.title}</h1>
+          <p className="text-sm text-text-muted">{t.schedules.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
           >
-            Import
+            {t.common.import}
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90"
           >
-            + New class plan
+            {t.schedules.newPlanBtn}
           </button>
         </div>
       </div>
@@ -121,14 +126,14 @@ export function SchedulesPage() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
-              <th className="px-5 py-3 font-medium">Session</th>
-              <th className="px-5 py-3 font-medium">Teacher</th>
-              <th className="px-5 py-3 font-medium">Class</th>
-              <th className="px-5 py-3 font-medium">Room</th>
-              <th className="px-5 py-3 font-medium">Day</th>
-              <th className="px-5 py-3 font-medium">Time</th>
-              <th className="px-5 py-3 font-medium">Check windows</th>
-              <th className="px-5 py-3 font-medium">Camera</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colSession}</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colTeacher}</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colClass}</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colRoom}</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colDay}</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colTime}</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colCheckWindows}</th>
+              <th className="px-5 py-3 font-medium">{t.schedules.colCamera}</th>
               <th className="px-5 py-3 font-medium" />
             </tr>
           </thead>
@@ -144,7 +149,7 @@ export function SchedulesPage() {
                   <td className="px-5 py-3 text-text-muted">{s.teacher}</td>
                   <td className="px-5 py-3">
                     {s.isLocalOnly ? (
-                      <span className="text-xs text-text-muted" title="Local-only class plans can't have a class assigned">
+                      <span className="text-xs text-text-muted" title={t.schedules.localOnlyClassTitle}>
                         —
                       </span>
                     ) : (
@@ -154,7 +159,7 @@ export function SchedulesPage() {
                         onChange={(e) => handleClassChange(s.id, e.target.value)}
                         className="w-full rounded-lg border border-border bg-bg-inset px-2 py-1.5 text-xs outline-none focus:border-accent disabled:opacity-50"
                       >
-                        <option value="">Unassigned</option>
+                        <option value="">{t.common.unassigned}</option>
                         {classOptions.map((c) => (
                           <option key={c} value={c}>
                             {c}
@@ -164,7 +169,7 @@ export function SchedulesPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-text-muted">{s.room}</td>
-                  <td className="px-5 py-3 text-text-muted">{s.day}</td>
+                  <td className="px-5 py-3 text-text-muted">{dayLabel(s.day, t)}</td>
                   <td className="px-5 py-3 font-data text-text-muted">
                     {formatTime(s.start_time)}–{formatTime(s.end_time)}
                   </td>
@@ -173,7 +178,7 @@ export function SchedulesPage() {
                   </td>
                   <td className="px-5 py-3">
                     {s.isLocalOnly ? (
-                      <span className="text-xs text-text-muted" title="Local-only class plans can't have a camera assigned">
+                      <span className="text-xs text-text-muted" title={t.schedules.localOnlyCameraTitle}>
                         —
                       </span>
                     ) : (
@@ -183,7 +188,7 @@ export function SchedulesPage() {
                         onChange={(e) => handleCameraChange(s.id, e.target.value)}
                         className="w-full rounded-lg border border-border bg-bg-inset px-2 py-1.5 text-xs outline-none focus:border-accent disabled:opacity-50"
                       >
-                        <option value="">No camera</option>
+                        <option value="">{t.schedules.noCameraOption}</option>
                         {cameras.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
@@ -199,7 +204,7 @@ export function SchedulesPage() {
                       disabled={deletingId === s.id}
                       className="rounded-lg px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                     >
-                      {deletingId === s.id ? "Deleting…" : "Delete"}
+                      {deletingId === s.id ? t.schedules.deleting : t.common.delete}
                     </button>
                   </td>
                 </tr>
@@ -207,12 +212,7 @@ export function SchedulesPage() {
             )}
           </tbody>
         </table>
-        <p className="border-t border-border px-5 py-2 text-xs text-text-muted">
-          Teacher, room, day and check windows are stored locally in this browser — the backend
-          schedule model doesn't have these fields yet. The camera and class assignments are real
-          and shared across all admins. Only students in the assigned class count toward this
-          session's roster and are recognized live.
-        </p>
+        <p className="border-t border-border px-5 py-2 text-xs text-text-muted">{t.schedules.footnote}</p>
       </div>
 
       {isModalOpen && (
@@ -221,7 +221,7 @@ export function SchedulesPage() {
           onClose={() => setIsModalOpen(false)}
           onCreated={() => {
             setIsModalOpen(false);
-            showSuccess("Class plan created");
+            showSuccess(t.schedules.toastPlanCreated);
             load();
           }}
         />
@@ -247,6 +247,7 @@ function NewClassPlanModal({
   onCreated: () => void;
 }) {
   const { showError } = useToast();
+  const { t } = useLanguage();
   const [form, setForm] = useState<ClassPlanInput>({
     name: "",
     teacher: "",
@@ -278,25 +279,25 @@ function NewClassPlanModal({
   }
 
   return (
-    <Modal title="New class plan" onClose={onClose}>
+    <Modal title={t.schedules.newPlanModalTitle} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <TextField label="Name" value={form.name} onChange={(v) => set("name", v)} required />
+        <TextField label={t.schedules.fieldName} value={form.name} onChange={(v) => set("name", v)} required />
         <TextField
-          label="Teacher"
+          label={t.schedules.fieldTeacher}
           value={form.teacher}
           onChange={(v) => set("teacher", v)}
           required
         />
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-            Class
+            {t.schedules.colClass}
           </label>
           <select
             value={form.class_name ?? ""}
             onChange={(e) => set("class_name", e.target.value || null)}
             className="w-full rounded-lg border border-border bg-bg-inset px-3 py-2 text-sm outline-none focus:border-accent"
           >
-            <option value="">Unassigned</option>
+            <option value="">{t.common.unassigned}</option>
             {classOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -305,10 +306,10 @@ function NewClassPlanModal({
           </select>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <TextField label="Room" value={form.room} onChange={(v) => set("room", v)} required />
+          <TextField label={t.schedules.fieldRoom} value={form.room} onChange={(v) => set("room", v)} required />
           <div>
             <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-              Day
+              {t.schedules.fieldDay}
             </label>
             <select
               value={form.day}
@@ -317,7 +318,7 @@ function NewClassPlanModal({
             >
               {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {dayLabel(d, t)}
                 </option>
               ))}
             </select>
@@ -325,14 +326,14 @@ function NewClassPlanModal({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <TextField
-            label="Start time"
+            label={t.schedules.fieldStart}
             type="time"
             value={form.start_time}
             onChange={(v) => set("start_time", v)}
             required
           />
           <TextField
-            label="End time"
+            label={t.schedules.fieldEnd}
             type="time"
             value={form.end_time}
             onChange={(v) => set("end_time", v)}
@@ -341,13 +342,13 @@ function NewClassPlanModal({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <TextField
-            label="Check-in offset (min after start)"
+            label={t.schedules.fieldCheckIn}
             type="number"
             value={String(form.check_in_offset_minutes)}
             onChange={(v) => set("check_in_offset_minutes", Number(v))}
           />
           <TextField
-            label="Check-out offset (min before end)"
+            label={t.schedules.fieldCheckOut}
             type="number"
             value={String(form.check_out_offset_minutes)}
             onChange={(v) => set("check_out_offset_minutes", Number(v))}
@@ -358,7 +359,7 @@ function NewClassPlanModal({
           disabled={isSubmitting}
           className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
         >
-          {isSubmitting ? "Saving…" : "Save"}
+          {isSubmitting ? t.common.saving : t.common.save}
         </button>
       </form>
     </Modal>
@@ -373,6 +374,7 @@ function ImportSchedulesModal({
   onImported: () => void;
 }) {
   const { showError, showSuccess } = useToast();
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -389,12 +391,10 @@ function ImportSchedulesModal({
       setResult(data);
       onImported();
       if (data.created.length > 0) {
-        showSuccess(
-          `Imported ${data.created.length} session${data.created.length === 1 ? "" : "s"}`,
-        );
+        showSuccess(t.schedules.toastImported({ count: data.created.length }));
       }
       if (data.invalid > 0) {
-        showError(`${data.invalid} row${data.invalid === 1 ? "" : "s"} skipped — see details below`);
+        showError(t.schedules.toastSkipped({ count: data.invalid }));
       }
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -404,14 +404,14 @@ function ImportSchedulesModal({
   }
 
   return (
-    <Modal title="Import weekly plan" onClose={onClose}>
+    <Modal title={t.schedules.importModalTitle} onClose={onClose}>
       {!result ? (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <p className="text-sm text-text-muted">
-            Upload the week's timetable and the system builds the sessions itself: a PDF grid
-            (days × time slots, one exported timetable page — e.g. printed from Excel), or a
-            CSV/Excel sheet with one row per session (<code>name</code>, <code>teacher</code>,{" "}
-            <code>room</code>, <code>day</code>, <code>start_time</code>, <code>end_time</code>).
+            {t.schedules.importHelpIntro}
+            <code>name</code>, <code>teacher</code>, <code>room</code>, <code>day</code>,{" "}
+            <code>start_time</code>, <code>end_time</code>
+            {t.schedules.importHelpOutro}
           </p>
           <input
             ref={fileInputRef}
@@ -426,27 +426,27 @@ function ImportSchedulesModal({
             disabled={isSubmitting}
             className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
           >
-            {isSubmitting ? "Importing…" : "Import"}
+            {isSubmitting ? t.common.importing : t.common.import}
           </button>
         </form>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <Stat label="Sessions created" value={result.created.length} />
-            <Stat label="Rows skipped" value={result.invalid} />
+            <Stat label={t.schedules.importStatCreated} value={result.created.length} />
+            <Stat label={t.schedules.importStatSkipped} value={result.invalid} />
           </div>
 
           {result.created.length > 0 && (
             <div>
               <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
-                Created
+                {t.schedules.importCreatedHeader}
               </p>
               <ul className="max-h-48 overflow-y-auto rounded-lg border border-border text-sm">
                 {result.created.map((s) => (
                   <li key={s.schedule_id} className="border-b border-border px-3 py-2 last:border-0">
                     <span className="font-medium">{s.name}</span>{" "}
                     <span className="text-text-muted">
-                      — {s.day} {s.start_time}–{s.end_time} · {s.teacher} · {s.room}
+                      — {dayLabel(s.day, t)} {s.start_time}–{s.end_time} · {s.teacher} · {s.room}
                     </span>
                   </li>
                 ))}
@@ -457,12 +457,12 @@ function ImportSchedulesModal({
           {result.errors.length > 0 && (
             <div>
               <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
-                Skipped rows
+                {t.schedules.importSkippedRows}
               </p>
               <ul className="max-h-32 overflow-y-auto rounded-lg border border-border text-xs">
                 {result.errors.map((e) => (
                   <li key={e.row} className="border-b border-border px-3 py-1.5 last:border-0">
-                    Row {e.row}: {e.reason}
+                    {t.common.rowError({ row: e.row, reason: e.reason })}
                   </li>
                 ))}
               </ul>
@@ -473,7 +473,7 @@ function ImportSchedulesModal({
             onClick={onClose}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
           >
-            Done
+            {t.common.done}
           </button>
         </div>
       )}
