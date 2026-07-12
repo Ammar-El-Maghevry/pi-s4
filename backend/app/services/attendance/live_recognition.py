@@ -81,14 +81,25 @@ def _active_session(db, camera_id: int, now: datetime):
     return None
 
 
+def _grab_frame(camera: Camera):
+    """Derniere frame de la camera selon sa source (telephone WebRTC ou flux OpenCV)."""
+    if camera.source_type == CameraSourceType.PHONE:
+        if not camera.webrtc_token:
+            return None
+        return get_latest_frame_bgr(camera.webrtc_token)
+    return ip_stream.get_latest_frame_bgr(camera.id, camera.source_url)
+
+
 def _process_camera(db, camera: Camera, now: datetime) -> None:
-    if camera.source_type != CameraSourceType.PHONE or not camera.is_active or not camera.webrtc_token:
+    if not camera.is_active:
         return
+    # Le prelevement vient APRES la verification de seance : le lecteur d'une
+    # camera IP ne demarre donc que pendant un cours (voir ip_stream.py).
     schedule = _active_session(db, camera.id, now)
     if schedule is None:
         return
 
-    frame = get_latest_frame_bgr(camera.webrtc_token)
+    frame = _grab_frame(camera)
     if frame is None:
         return
 
