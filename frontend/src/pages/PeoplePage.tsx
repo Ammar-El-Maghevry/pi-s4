@@ -23,7 +23,7 @@ import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { todayIso } from "../lib/time";
-import type { Student, Teacher } from "../lib/types";
+import type { Student, StudentImportResult, Teacher } from "../lib/types";
 
 type Tab = "students" | "teachers";
 
@@ -36,6 +36,7 @@ export function PeoplePage() {
   const [teacherAttendance, setTeacherAttendance] = useState<Record<number, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [photoTarget, setPhotoTarget] = useState<Student | null>(null);
   const [teacherPhotoTarget, setTeacherPhotoTarget] = useState<Teacher | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
