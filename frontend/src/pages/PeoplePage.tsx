@@ -152,12 +152,22 @@ export function PeoplePage() {
           <h1 className="text-2xl font-semibold">People</h1>
           <p className="text-sm text-text-muted">Manage enrolled students and teachers</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90"
-        >
-          + Add {tab === "students" ? "student" : "teacher"}
-        </button>
+        <div className="flex items-center gap-2">
+          {tab === "students" && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
+            >
+              Import
+            </button>
+          )}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90"
+          >
+            + Add {tab === "students" ? "student" : "teacher"}
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-4">

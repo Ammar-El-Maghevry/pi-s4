@@ -344,6 +344,17 @@ export function PeoplePage() {
         />
       )}
 
+      {isImportModalOpen && (
+        <ImportStudentsModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImported={() => load()}
+          onAddPhoto={(id, fullName, studentId) => {
+            setIsImportModalOpen(false);
+            openPhotoTargetFor(id, fullName, studentId);
+          }}
+        />
+      )}
+
       {photoTarget && (
         <PhotoCaptureModal
           title={`Enroll photo — ${photoTarget.full_name}`}
