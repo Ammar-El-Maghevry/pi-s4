@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 import { apiErrorMessage } from "../lib/api";
 
 export function LoginPage() {
   const { user, login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
@@ -37,7 +39,7 @@ export function LoginPage() {
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <span className="h-3 w-3 animate-pulse rounded-full bg-accent" />
           <h1 className="font-heading text-2xl font-semibold">Presence.sys</h1>
-          <p className="text-sm text-text-muted">Automated attendance control panel</p>
+          <p className="text-sm text-text-muted">{t.login.tagline}</p>
         </div>
 
         <form
@@ -46,7 +48,7 @@ export function LoginPage() {
         >
           <div className="mb-4">
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-muted">
-              Email
+              {t.login.email}
             </label>
             <input
               type="email"
@@ -60,7 +62,7 @@ export function LoginPage() {
           </div>
           <div className="mb-5">
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-muted">
-              Password
+              {t.login.password}
             </label>
             <input
               type="password"
@@ -83,7 +85,7 @@ export function LoginPage() {
             disabled={isSubmitting}
             className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {isSubmitting ? "Signing in…" : "Sign in"}
+            {isSubmitting ? t.login.signingIn : t.login.signIn}
           </button>
         </form>
       </div>
