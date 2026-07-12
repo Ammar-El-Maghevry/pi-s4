@@ -6,13 +6,20 @@ frontend d'afficher les créneaux, d'assigner la caméra de la salle à chaque
 séance, et au moteur de présence de s'y référer. Toutes les routes sont
 protégées par l'authentification administrateur.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
 from app.crud import camera as crud_camera
 from app.crud import schedule as crud_schedule
 from app.schemas.schedule import ScheduleCreate, ScheduleRead, ScheduleUpdate
+from app.schemas.schedule_import import (
+    ScheduleImportCreated,
+    ScheduleImportResult,
+    ScheduleImportRowError,
+)
+from app.services.schedules_import import ScheduleImportError, import_schedules
 
 router = APIRouter(
     prefix="/schedules",
