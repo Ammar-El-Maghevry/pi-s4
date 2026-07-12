@@ -113,6 +113,22 @@ export function PeoplePage() {
     }
   }
 
+  function openPhotoTargetFor(id: number, fullName: string, studentId: string) {
+    setPhotoError(null);
+    setPhotoTarget({
+      id,
+      full_name: fullName,
+      student_id: studentId,
+      email: null,
+      department: null,
+      class_name: null,
+      photo_path: null,
+      has_face_embedding: false,
+      created_at: "",
+      updated_at: "",
+    });
+  }
+
   async function handleTeacherPhotoCapture(photo: Blob) {
     if (!teacherPhotoTarget) return;
     setPhotoError(null);
