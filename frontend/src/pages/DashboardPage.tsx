@@ -6,6 +6,7 @@ import { listStudents } from "../api/students";
 import { getTeacherAttendance, listTeachers } from "../api/teachers";
 import { StatCard } from "../components/StatCard";
 import { TableEmpty, TableLoading } from "../components/TableStates";
+import { useLanguage } from "../context/LanguageContext";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { formatTime, nowMinutes, timeStringToMinutes, todayIso } from "../lib/time";
