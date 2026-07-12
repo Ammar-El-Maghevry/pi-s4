@@ -224,11 +224,8 @@ export const en = {
     fieldPairingEmail: "Pairing email (optional)",
     activeCheckbox: "Active",
     phoneSavedTitle: "Phone camera saved",
-    phoneSavedHint: (vars: { name: string }) => [
-      "Open this link on the phone's own browser to start streaming its camera as ",
-      vars.name,
-      ".",
-    ],
+    phoneSavedHintPrefix: "Open this link on the phone's own browser to start streaming its camera as ",
+    phoneSavedHintSuffix: ".",
     copyBtn: "Copy",
     emailThisLink: (vars: { email: string }) => `Email this link to ${vars.email}`,
     certWarning:
