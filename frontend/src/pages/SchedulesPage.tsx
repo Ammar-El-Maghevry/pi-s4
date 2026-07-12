@@ -101,12 +101,20 @@ export function SchedulesPage() {
             Weekly session schedule and camera check-in/out windows
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90"
-        >
-          + New class plan
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
+          >
+            Import
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90"
+          >
+            + New class plan
+          </button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-bg-elevated">
@@ -216,6 +224,13 @@ export function SchedulesPage() {
             showSuccess("Class plan created");
             load();
           }}
+        />
+      )}
+
+      {isImportModalOpen && (
+        <ImportSchedulesModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImported={() => load()}
         />
       )}
     </div>
