@@ -1,21 +1,22 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
-
-const ADMIN_NAV = [
-  { to: "/", label: "Dashboard", end: true },
-  { to: "/people", label: "People" },
-  { to: "/schedules", label: "Class plans" },
-  { to: "/cameras", label: "Cameras" },
-  { to: "/attendance", label: "Attendance" },
-  { to: "/reports", label: "Reports" },
-];
-
-const SELF_NAV = [{ to: "/reports", label: "My report", end: true }];
 
 export function AppShell() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { language, toggleLanguage, t } = useLanguage();
+
+  const ADMIN_NAV = [
+    { to: "/", label: t.nav.dashboard, end: true },
+    { to: "/people", label: t.nav.people },
+    { to: "/schedules", label: t.nav.schedules },
+    { to: "/cameras", label: t.nav.cameras },
+    { to: "/attendance", label: t.nav.attendance },
+    { to: "/reports", label: t.nav.reports },
+  ];
+  const SELF_NAV = [{ to: "/reports", label: t.nav.myReport, end: true }];
   const nav = user?.role === "admin" ? ADMIN_NAV : SELF_NAV;
 
   return (
@@ -50,7 +51,7 @@ export function AppShell() {
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border bg-bg-elevated px-6 py-3">
           <div className="font-data text-xs text-text-muted">
-            {new Date().toLocaleDateString(undefined, {
+            {new Date().toLocaleDateString(language === "fr" ? "fr-FR" : undefined, {
               weekday: "long",
               year: "numeric",
               month: "long",
@@ -59,11 +60,18 @@ export function AppShell() {
           </div>
           <div className="flex items-center gap-4">
             <button
+              onClick={toggleLanguage}
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-text-muted hover:text-text"
+              aria-label={t.shell.toggleLanguage}
+            >
+              {language === "fr" ? "FR" : "EN"}
+            </button>
+            <button
               onClick={toggleTheme}
               className="rounded-md border border-border px-3 py-1.5 text-sm text-text-muted hover:text-text"
-              aria-label="Toggle theme"
+              aria-label={t.shell.toggleTheme}
             >
-              {theme === "dark" ? "☀ Light" : "● Dark"}
+              {theme === "dark" ? t.shell.light : t.shell.dark}
             </button>
             <div className="flex items-center gap-2 text-sm">
               <span className="font-medium">{user?.full_name}</span>
@@ -75,7 +83,7 @@ export function AppShell() {
               onClick={logout}
               className="rounded-md border border-border px-3 py-1.5 text-sm text-text-muted hover:border-absent/50 hover:text-absent"
             >
-              Log out
+              {t.shell.logout}
             </button>
           </div>
         </header>

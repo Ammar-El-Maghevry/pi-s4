@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 export function Modal({
   title,
@@ -9,6 +10,7 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4"
@@ -23,7 +25,7 @@ export function Modal({
           <button
             onClick={onClose}
             className="rounded-md p-1 text-text-muted hover:bg-bg-inset hover:text-text"
-            aria-label="Close"
+            aria-label={t.common.close}
           >
             ✕
           </button>
