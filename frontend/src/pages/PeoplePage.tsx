@@ -20,6 +20,7 @@ import { Modal } from "../components/Modal";
 import { PhotoCaptureModal } from "../components/PhotoCaptureModal";
 import { PhotoPicker } from "../components/PhotoPicker";
 import { TableEmpty, TableLoading } from "../components/TableStates";
+import { useLanguage } from "../context/LanguageContext";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { todayIso } from "../lib/time";
@@ -29,6 +30,7 @@ type Tab = "students" | "teachers";
 
 export function PeoplePage() {
   const { showError, showSuccess } = useToast();
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("students");
   const [search, setSearch] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
@@ -74,10 +76,10 @@ export function PeoplePage() {
   }, [search]);
 
   async function handleDeleteStudent(id: number) {
-    if (!confirm("Remove this student?")) return;
+    if (!confirm(t.people.confirmRemoveStudent)) return;
     try {
       await deleteStudent(id);
-      showSuccess("Student removed");
+      showSuccess(t.people.toastStudentRemoved);
       load();
     } catch (err) {
       showError(apiErrorMessage(err));
@@ -85,9 +87,9 @@ export function PeoplePage() {
   }
 
   async function handleDeleteTeacher(id: number) {
-    if (!confirm("Remove this teacher?")) return;
+    if (!confirm(t.people.confirmRemoveTeacher)) return;
     await deleteTeacher(id);
-    showSuccess("Teacher removed");
+    showSuccess(t.people.toastTeacherRemoved);
     load();
   }
 
@@ -103,7 +105,7 @@ export function PeoplePage() {
     setIsUploadingPhoto(true);
     try {
       await uploadStudentPhoto(photoTarget.id, photo);
-      showSuccess("Photo enrolled — face embedding computed");
+      showSuccess(t.people.toastPhotoEnrolled);
       setPhotoTarget(null);
       load();
     } catch (err) {
@@ -135,7 +137,7 @@ export function PeoplePage() {
     setIsUploadingPhoto(true);
     try {
       await uploadTeacherPhoto(teacherPhotoTarget.id, photo);
-      showSuccess("Photo enrolled — face embedding computed");
+      showSuccess(t.people.toastPhotoEnrolled);
       setTeacherPhotoTarget(null);
       load();
     } catch (err) {
@@ -149,8 +151,8 @@ export function PeoplePage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">People</h1>
-          <p className="text-sm text-text-muted">Manage enrolled students and teachers</p>
+          <h1 className="text-2xl font-semibold">{t.people.title}</h1>
+          <p className="text-sm text-text-muted">{t.people.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           {tab === "students" && (
@@ -158,36 +160,36 @@ export function PeoplePage() {
               onClick={() => setIsImportModalOpen(true)}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
             >
-              Import
+              {t.common.import}
             </button>
           )}
           <button
             onClick={() => setIsModalOpen(true)}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90"
           >
-            + Add {tab === "students" ? "student" : "teacher"}
+            {tab === "students" ? t.people.addStudent : t.people.addTeacher}
           </button>
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-4">
         <div className="flex gap-1 rounded-lg border border-border bg-bg-elevated p-1">
-          {(["students", "teachers"] as Tab[]).map((t) => (
+          {(["students", "teachers"] as Tab[]).map((tabKey) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
-                tab === t ? "bg-accent-soft text-accent" : "text-text-muted hover:text-text"
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                tab === tabKey ? "bg-accent-soft text-accent" : "text-text-muted hover:text-text"
               }`}
             >
-              {t}
+              {tabKey === "students" ? t.people.tabStudents : t.people.tabTeachers}
             </button>
           ))}
         </div>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, ID, or department…"
+          placeholder={t.people.searchPlaceholder}
           className="w-72 rounded-lg border border-border bg-bg-inset px-3 py-2 text-sm outline-none focus:border-accent"
         />
       </div>
@@ -197,13 +199,13 @@ export function PeoplePage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-5 py-3 font-medium">Photo</th>
-                <th className="px-5 py-3 font-medium">Name</th>
-                <th className="px-5 py-3 font-medium">Student ID</th>
-                <th className="px-5 py-3 font-medium">Email</th>
-                <th className="px-5 py-3 font-medium">Department</th>
-                <th className="px-5 py-3 font-medium">Class</th>
-                <th className="px-5 py-3 font-medium">Live status</th>
+                <th className="px-5 py-3 font-medium">{t.people.colPhoto}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colName}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colStudentId}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colEmail}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colDepartment}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colClass}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colLiveStatus}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -221,7 +223,7 @@ export function PeoplePage() {
                           setPhotoError(null);
                           setPhotoTarget(s);
                         }}
-                        title={s.has_face_embedding ? "Retake photo" : "Add photo"}
+                        title={s.has_face_embedding ? t.people.retakePhotoTitle : t.people.addPhotoTitle}
                       >
                         <StudentAvatar student={s} />
                       </button>
@@ -239,7 +241,7 @@ export function PeoplePage() {
                             : "border-border bg-bg-inset text-text-muted"
                         }`}
                       >
-                        {s.has_face_embedding ? "Enrolled" : "Not enrolled"}
+                        {s.has_face_embedding ? t.people.enrolled : t.people.notEnrolled}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
@@ -247,7 +249,7 @@ export function PeoplePage() {
                         onClick={() => handleDeleteStudent(s.id)}
                         className="text-xs text-text-muted hover:text-absent"
                       >
-                        Remove
+                        {t.common.remove}
                       </button>
                     </td>
                   </tr>
@@ -259,11 +261,11 @@ export function PeoplePage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-5 py-3 font-medium">Photo</th>
-                <th className="px-5 py-3 font-medium">Name</th>
-                <th className="px-5 py-3 font-medium">Email</th>
-                <th className="px-5 py-3 font-medium">Live status</th>
-                <th className="px-5 py-3 font-medium">Today</th>
+                <th className="px-5 py-3 font-medium">{t.people.colPhoto}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colName}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colEmail}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colLiveStatus}</th>
+                <th className="px-5 py-3 font-medium">{t.people.colToday}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -273,50 +275,50 @@ export function PeoplePage() {
               ) : teachers.length === 0 ? (
                 <TableEmpty colSpan={6} />
               ) : (
-                teachers.map((t) => (
-                  <tr key={t.id} className="border-b border-border last:border-0">
+                teachers.map((teacher) => (
+                  <tr key={teacher.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3">
                       <button
                         onClick={() => {
                           setPhotoError(null);
-                          setTeacherPhotoTarget(t);
+                          setTeacherPhotoTarget(teacher);
                         }}
-                        title={t.has_face_embedding ? "Retake photo" : "Add photo"}
+                        title={teacher.has_face_embedding ? t.people.retakePhotoTitle : t.people.addPhotoTitle}
                       >
-                        <TeacherAvatar teacher={t} />
+                        <TeacherAvatar teacher={teacher} />
                       </button>
                     </td>
-                    <td className="px-5 py-3 font-medium">{t.full_name}</td>
-                    <td className="px-5 py-3 text-text-muted">{t.email ?? "—"}</td>
+                    <td className="px-5 py-3 font-medium">{teacher.full_name}</td>
+                    <td className="px-5 py-3 text-text-muted">{teacher.email ?? "—"}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-data ${
-                          t.has_face_embedding
+                          teacher.has_face_embedding
                             ? "border-present/30 bg-present/10 text-present"
                             : "border-border bg-bg-inset text-text-muted"
                         }`}
                       >
-                        {t.has_face_embedding ? "Enrolled" : "Not enrolled"}
+                        {teacher.has_face_embedding ? t.people.enrolled : t.people.notEnrolled}
                       </span>
                     </td>
                     <td className="px-5 py-3">
                       <button
-                        onClick={() => handleToggleTeacherPresent(t.id)}
+                        onClick={() => handleToggleTeacherPresent(teacher.id)}
                         className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-data ${
-                          teacherAttendance[t.id]
+                          teacherAttendance[teacher.id]
                             ? "border-present/30 bg-present/10 text-present"
                             : "border-border bg-bg-inset text-text-muted"
                         }`}
                       >
-                        {teacherAttendance[t.id] ? "Present" : "Absent"}
+                        {teacherAttendance[teacher.id] ? t.statusPill.present : t.statusPill.absent}
                       </button>
                     </td>
                     <td className="px-5 py-3 text-right">
                       <button
-                        onClick={() => handleDeleteTeacher(t.id)}
+                        onClick={() => handleDeleteTeacher(teacher.id)}
                         className="text-xs text-text-muted hover:text-absent"
                       >
-                        Remove
+                        {t.common.remove}
                       </button>
                     </td>
                   </tr>
@@ -326,10 +328,7 @@ export function PeoplePage() {
           </table>
         )}
         {tab === "teachers" && (
-          <p className="border-t border-border px-5 py-2 text-xs text-text-muted">
-            Enroll a photo (click a teacher's avatar) so the live camera can recognize them and mark
-            them present automatically — same as students. "Today" also lets you mark it by hand.
-          </p>
+          <p className="border-t border-border px-5 py-2 text-xs text-text-muted">{t.people.teachersHint}</p>
         )}
       </div>
 
@@ -357,7 +356,7 @@ export function PeoplePage() {
 
       {photoTarget && (
         <PhotoCaptureModal
-          title={`Enroll photo — ${photoTarget.full_name}`}
+          title={t.people.enrollPhotoModalTitle({ name: photoTarget.full_name })}
           onClose={() => setPhotoTarget(null)}
           onCapture={handlePhotoCapture}
           isSubmitting={isUploadingPhoto}
@@ -367,7 +366,7 @@ export function PeoplePage() {
 
       {teacherPhotoTarget && (
         <PhotoCaptureModal
-          title={`Enroll photo — ${teacherPhotoTarget.full_name}`}
+          title={t.people.enrollPhotoModalTitle({ name: teacherPhotoTarget.full_name })}
           onClose={() => setTeacherPhotoTarget(null)}
           onCapture={handleTeacherPhotoCapture}
           isSubmitting={isUploadingPhoto}
@@ -444,6 +443,7 @@ function AddPersonModal({
   onCreated: () => void;
 }) {
   const { showError, showSuccess } = useToast();
+  const { t } = useLanguage();
   const [fullName, setFullName] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -465,24 +465,24 @@ function AddPersonModal({
         if (photo) {
           try {
             await uploadStudentPhoto(student.id, photo);
-            showSuccess("Student added with photo enrolled");
+            showSuccess(t.people.toastStudentAddedWithPhoto);
           } catch (photoErr) {
-            showError(`Student added, but photo upload failed: ${apiErrorMessage(photoErr)}`);
+            showError(t.people.toastStudentPhotoFailed({ reason: apiErrorMessage(photoErr) }));
           }
         } else {
-          showSuccess("Student added");
+          showSuccess(t.people.toastStudentAdded);
         }
       } else {
         const teacher = await createTeacher({ full_name: fullName, email: email || null });
         if (photo) {
           try {
             await uploadTeacherPhoto(teacher.id, photo);
-            showSuccess("Teacher added with photo enrolled");
+            showSuccess(t.people.toastTeacherAddedWithPhoto);
           } catch (photoErr) {
-            showError(`Teacher added, but photo upload failed: ${apiErrorMessage(photoErr)}`);
+            showError(t.people.toastTeacherPhotoFailed({ reason: apiErrorMessage(photoErr) }));
           }
         } else {
-          showSuccess("Teacher added");
+          showSuccess(t.people.toastTeacherAdded);
         }
       }
       onCreated();
@@ -494,19 +494,22 @@ function AddPersonModal({
   }
 
   return (
-    <Modal title={`Add ${tab === "students" ? "student" : "teacher"}`} onClose={onClose}>
+    <Modal
+      title={tab === "students" ? t.people.addPersonModalTitleStudent : t.people.addPersonModalTitleTeacher}
+      onClose={onClose}
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <Field label="Full name" value={fullName} onChange={setFullName} required />
+        <Field label={t.people.fieldFullName} value={fullName} onChange={setFullName} required />
         {tab === "students" && (
           <>
-            <Field label="Student ID" value={idNumber} onChange={setIdNumber} required />
-            <Field label="Department" value={department} onChange={setDepartment} />
+            <Field label={t.people.fieldStudentId} value={idNumber} onChange={setIdNumber} required />
+            <Field label={t.people.fieldDepartment} value={department} onChange={setDepartment} />
           </>
         )}
-        <Field label="Email" value={email} onChange={setEmail} type="email" />
+        <Field label={t.people.fieldEmail} value={email} onChange={setEmail} type="email" />
         <div>
           <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-            Photo (optional — enroll now so the live camera can recognize them)
+            {t.people.photoFieldLabel}
           </label>
           <PhotoPicker value={photo} onChange={setPhoto} height={200} />
         </div>
@@ -515,7 +518,7 @@ function AddPersonModal({
           disabled={isSubmitting}
           className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
         >
-          {isSubmitting ? "Saving…" : "Save"}
+          {isSubmitting ? t.common.saving : t.common.save}
         </button>
       </form>
     </Modal>
@@ -532,6 +535,7 @@ function ImportStudentsModal({
   onAddPhoto: (id: number, fullName: string, studentId: string) => void;
 }) {
   const { showError, showSuccess } = useToast();
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -548,12 +552,10 @@ function ImportStudentsModal({
       setResult(data);
       onImported();
       if (data.created > 0) {
-        showSuccess(`Imported ${data.created} student${data.created === 1 ? "" : "s"}`);
+        showSuccess(t.people.toastImported({ count: data.created }));
       }
       if (data.missing_photo > 0) {
-        showError(
-          `${data.missing_photo} imported student${data.missing_photo === 1 ? " has" : "s have"} no photo — add one from the list below or later from People`,
-        );
+        showError(t.people.toastMissingPhoto({ count: data.missing_photo }));
       }
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -563,14 +565,10 @@ function ImportStudentsModal({
   }
 
   return (
-    <Modal title="Import students" onClose={onClose}>
+    <Modal title={t.people.importModalTitle} onClose={onClose}>
       {!result ? (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <p className="text-sm text-text-muted">
-            Upload a CSV or Excel file with columns <code>full_name</code>, <code>student_id</code>,{" "}
-            <code>email</code>, <code>department</code>. To enroll photos at the same time, upload a
-            ZIP containing that sheet plus image files named <code>&lt;student_id&gt;.jpg</code>.
-          </p>
+          <p className="text-sm text-text-muted">{t.people.importHelp}</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -584,27 +582,27 @@ function ImportStudentsModal({
             disabled={isSubmitting}
             className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
           >
-            {isSubmitting ? "Importing…" : "Import"}
+            {isSubmitting ? t.common.importing : t.common.import}
           </button>
         </form>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-            <Stat label="Created" value={result.created} />
-            <Stat label="Duplicates" value={result.duplicates} />
-            <Stat label="Invalid rows" value={result.invalid} />
-            <Stat label="No photo" value={result.missing_photo} />
+            <Stat label={t.people.importStatCreated} value={result.created} />
+            <Stat label={t.people.importStatDuplicates} value={result.duplicates} />
+            <Stat label={t.people.importStatInvalid} value={result.invalid} />
+            <Stat label={t.people.importStatNoPhoto} value={result.missing_photo} />
           </div>
 
           {result.errors.length > 0 && (
             <div>
               <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
-                Skipped rows
+                {t.people.importSkippedRows}
               </p>
               <ul className="max-h-32 overflow-y-auto rounded-lg border border-border text-xs">
                 {result.errors.map((e) => (
                   <li key={e.row} className="border-b border-border px-3 py-1.5 last:border-0">
-                    Row {e.row}: {e.reason}
+                    {t.common.rowError({ row: e.row, reason: e.reason })}
                   </li>
                 ))}
               </ul>
@@ -614,7 +612,7 @@ function ImportStudentsModal({
           {result.missing_photo_students.length > 0 && (
             <div>
               <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
-                Missing photos — enroll now or later from the People list
+                {t.people.importMissingPhotoHeader}
               </p>
               <ul className="max-h-48 overflow-y-auto rounded-lg border border-border text-sm">
                 {result.missing_photo_students.map((s) => (
@@ -629,7 +627,7 @@ function ImportStudentsModal({
                       onClick={() => onAddPhoto(s.id, s.full_name, s.student_id)}
                       className="text-xs font-medium text-accent hover:underline"
                     >
-                      Add photo
+                      {t.common.addPhoto}
                     </button>
                   </li>
                 ))}
@@ -641,7 +639,7 @@ function ImportStudentsModal({
             onClick={onClose}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-bg-inset"
           >
-            Done
+            {t.common.done}
           </button>
         </div>
       )}
