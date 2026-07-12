@@ -93,6 +93,30 @@ export async function createClassPlan(input: ClassPlanInput): Promise<ScheduleWi
   return { ...schedule, ...scheduleExtras, isLocalOnly: false };
 }
 
+export async function importClassPlans(file: File): Promise<ScheduleImportResult> {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  const { data } = await api.post<ScheduleImportResult>("/schedules/import", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  // teacher/room/day/offsets aren't backend columns (see module header) — persist
+  // them locally for every session the import created, same as a manual "class plan".
+  const extras = readExtras();
+  for (const created of data.created) {
+    extras[created.schedule_id] = {
+      teacher: created.teacher,
+      room: created.room,
+      day: created.day,
+      check_in_offset_minutes: created.check_in_offset_minutes,
+      check_out_offset_minutes: created.check_out_offset_minutes,
+    };
+  }
+  writeExtras(extras);
+
+  return data;
+}
+
 export async function assignScheduleCamera(
   scheduleId: number,
   cameraId: number | null,

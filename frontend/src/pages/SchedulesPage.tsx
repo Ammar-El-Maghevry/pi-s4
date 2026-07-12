@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { listCameras } from "../api/cameras";
 import {
   assignScheduleCamera,
   assignScheduleClass,
   createClassPlan,
   deleteClassPlan,
+  importClassPlans,
   listClassPlans,
   type ClassPlanInput,
 } from "../api/schedules";
@@ -14,7 +15,7 @@ import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { formatTime } from "../lib/time";
-import type { Camera, ScheduleWithExtras } from "../lib/types";
+import type { Camera, ScheduleImportResult, ScheduleWithExtras } from "../lib/types";
 
 export function SchedulesPage() {
   const { showError, showSuccess } = useToast();
