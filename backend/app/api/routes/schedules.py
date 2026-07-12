@@ -45,16 +45,17 @@ async def import_schedules_route(file: UploadFile = File(...), db: Session = Dep
     """
     Importe l'emploi du temps d'une semaine complete depuis un fichier
     CSV/XLSX (une ligne par seance : name/teacher/room/day/start_time/
-    end_time, class_name et fenetres de pointage optionnelles). Chaque
-    seance valide est creee cote backend ; teacher/room/day/offsets sont
-    renvoyes pour que le frontend les persiste localement (voir
-    frontend/src/api/schedules.ts).
+    end_time, class_name et fenetres de pointage optionnelles) ou un PDF
+    grille (gabarit SupNum : jours en lignes x creneaux horaires en
+    colonnes, voir app/services/schedule_grid_pdf.py). Chaque seance valide
+    est creee cote backend ; teacher/room/day/offsets sont renvoyes pour que
+    le frontend les persiste localement (voir frontend/src/api/schedules.ts).
     """
     filename = file.filename or ""
-    if not filename.lower().endswith((".csv", ".xlsx")):
+    if not filename.lower().endswith((".csv", ".xlsx", ".pdf")):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Format non supporte : utilisez un fichier .csv ou .xlsx",
+            detail="Format non supporte : utilisez un fichier .csv, .xlsx ou .pdf",
         )
     content = await file.read()
     try:
