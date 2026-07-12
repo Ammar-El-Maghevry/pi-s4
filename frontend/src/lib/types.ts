@@ -35,6 +35,28 @@ export interface StudentCreate {
 
 export type StudentUpdate = Partial<StudentCreate>;
 
+export interface StudentImportRowError {
+  row: number;
+  reason: string;
+}
+
+export interface StudentImportMissingPhoto {
+  id: number;
+  full_name: string;
+  student_id: string;
+}
+
+export interface StudentImportResult {
+  total_rows: number;
+  created: number;
+  duplicates: number;
+  invalid: number;
+  missing_photo: number;
+  photo_failed: number;
+  missing_photo_students: StudentImportMissingPhoto[];
+  errors: StudentImportRowError[];
+}
+
 export const SessionType = {
   SESSION: "session",
   BREAK: "break",
