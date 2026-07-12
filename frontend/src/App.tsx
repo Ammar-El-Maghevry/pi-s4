@@ -17,29 +17,31 @@ import { SchedulesPage } from "./pages/SchedulesPage";
 function App() {
   return (
     <ThemeProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/phone-camera/:token" element={<PhoneCameraPage />} />
+      <LanguageProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/phone-camera/:token" element={<PhoneCameraPage />} />
 
-              <Route element={<ProtectedRoute />}>
-                <Route element={<AppShell />}>
-                  <Route element={<ProtectedRoute allow={["admin"]} fallback="/reports" />}>
-                    <Route path="/" element={<DashboardPage />} />
-                    <Route path="/people" element={<PeoplePage />} />
-                    <Route path="/schedules" element={<SchedulesPage />} />
-                    <Route path="/cameras" element={<CamerasPage />} />
-                    <Route path="/attendance" element={<AttendancePage />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<AppShell />}>
+                    <Route element={<ProtectedRoute allow={["admin"]} fallback="/reports" />}>
+                      <Route path="/" element={<DashboardPage />} />
+                      <Route path="/people" element={<PeoplePage />} />
+                      <Route path="/schedules" element={<SchedulesPage />} />
+                      <Route path="/cameras" element={<CamerasPage />} />
+                      <Route path="/attendance" element={<AttendancePage />} />
+                    </Route>
+                    <Route path="/reports" element={<ReportsPage />} />
                   </Route>
-                  <Route path="/reports" element={<ReportsPage />} />
                 </Route>
-              </Route>
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </ToastProvider>
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+        </ToastProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
