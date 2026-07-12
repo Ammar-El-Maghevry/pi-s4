@@ -35,3 +35,12 @@ export async function fetchStudentPhotoUrl(id: number): Promise<string> {
   const { data } = await api.get(`/students/${id}/photo`, { responseType: "blob" });
   return URL.createObjectURL(data);
 }
+
+export async function importStudents(file: File): Promise<StudentImportResult> {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  const { data } = await api.post<StudentImportResult>("/students/import", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}

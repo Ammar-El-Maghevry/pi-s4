@@ -1,5 +1,5 @@
 import { api } from "../lib/api";
-import type { Student, StudentCreate, StudentUpdate } from "../lib/types";
+import type { Student, StudentCreate, StudentImportResult, StudentUpdate } from "../lib/types";
 
 export async function listStudents(search?: string): Promise<Student[]> {
   const { data } = await api.get<Student[]>("/students", {
