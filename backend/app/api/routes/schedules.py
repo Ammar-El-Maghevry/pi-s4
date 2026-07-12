@@ -40,6 +40,49 @@ def create_schedule(data: ScheduleCreate, db: Session = Depends(get_db)):
     return crud_schedule.create_schedule(db, data)
 
 
+@router.post("/import", response_model=ScheduleImportResult)
+async def import_schedules_route(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Importe l'emploi du temps d'une semaine complete depuis un fichier
+    CSV/XLSX (une ligne par seance : name/teacher/room/day/start_time/
+    end_time, class_name et fenetres de pointage optionnelles). Chaque
+    seance valide est creee cote backend ; teacher/room/day/offsets sont
+    renvoyes pour que le frontend les persiste localement (voir
+    frontend/src/api/schedules.ts).
+    """
+    filename = file.filename or ""
+    if not filename.lower().endswith((".csv", ".xlsx")):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Format non supporte : utilisez un fichier .csv ou .xlsx",
+        )
+    content = await file.read()
+    try:
+        result = await run_in_threadpool(import_schedules, db, content, filename)
+    except ScheduleImportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return ScheduleImportResult(
+        total_rows=result.total_rows,
+        created=[
+            ScheduleImportCreated(
+                schedule_id=c.schedule_id,
+                name=c.name,
+                teacher=c.teacher,
+                room=c.room,
+                day=c.day,
+                start_time=c.start_time,
+                end_time=c.end_time,
+                check_in_offset_minutes=c.check_in_offset_minutes,
+                check_out_offset_minutes=c.check_out_offset_minutes,
+            )
+            for c in result.created
+        ],
+        invalid=result.invalid,
+        errors=[ScheduleImportRowError(row=e.row, reason=e.reason) for e in result.errors],
+    )
+
+
 @router.get("/{schedule_pk}", response_model=ScheduleRead)
 def get_schedule(schedule_pk: int, db: Session = Depends(get_db)):
     """Récupère un créneau par son identifiant."""
