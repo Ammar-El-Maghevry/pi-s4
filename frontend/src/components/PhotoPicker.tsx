@@ -44,7 +44,7 @@ export function PhotoPicker({
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
       })
-      .catch((err) => setCameraError(err.message ?? "Could not access the camera"));
+      .catch((err) => setCameraError(err.message ?? t.photoPicker.cameraAccessError));
     return () => {
       cancelled = true;
       stopStream();
@@ -95,7 +95,7 @@ export function PhotoPicker({
           }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium ${mode === "upload" ? "bg-accent-soft text-accent" : "text-text-muted"}`}
         >
-          Upload file
+          {t.photoPicker.uploadFile}
         </button>
         <button
           type="button"
@@ -105,7 +105,7 @@ export function PhotoPicker({
           }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium ${mode === "camera" ? "bg-accent-soft text-accent" : "text-text-muted"}`}
         >
-          Use camera
+          {t.photoPicker.useCamera}
         </button>
       </div>
 

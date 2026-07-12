@@ -95,7 +95,7 @@ export function PhotoPicker({
           }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium ${mode === "upload" ? "bg-accent-soft text-accent" : "text-text-muted"}`}
         >
-          Upload file
+          {t.photoPicker.uploadFile}
         </button>
         <button
           type="button"
@@ -105,7 +105,7 @@ export function PhotoPicker({
           }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium ${mode === "camera" ? "bg-accent-soft text-accent" : "text-text-muted"}`}
         >
-          Use camera
+          {t.photoPicker.useCamera}
         </button>
       </div>
 
@@ -117,7 +117,7 @@ export function PhotoPicker({
           <img src={preview} alt="Captured" className="h-full w-full object-contain" />
         ) : mode === "upload" ? (
           <label className="flex cursor-pointer flex-col items-center gap-2 text-sm text-text-muted">
-            <span>Click to choose an image (JPEG/PNG/WebP)</span>
+            <span>{t.photoPicker.clickToChoose}</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
