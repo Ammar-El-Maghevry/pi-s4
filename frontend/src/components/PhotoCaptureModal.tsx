@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
 import { Modal } from "./Modal";
 import { PhotoPicker } from "./PhotoPicker";
 
@@ -15,6 +16,7 @@ export function PhotoCaptureModal({
   isSubmitting: boolean;
   error: string | null;
 }) {
+  const { t } = useLanguage();
   const [pending, setPending] = useState<Blob | null>(null);
 
   return (
@@ -34,14 +36,14 @@ export function PhotoCaptureModal({
               onClick={() => setPending(null)}
               className="rounded-lg border border-border px-4 py-2 text-sm text-text-muted hover:text-text"
             >
-              Retake
+              {t.common.retake}
             </button>
             <button
               onClick={() => onCapture(pending)}
               disabled={isSubmitting}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:opacity-90 disabled:opacity-50"
             >
-              {isSubmitting ? "Uploading…" : "Save photo"}
+              {isSubmitting ? t.common.uploading : t.common.savePhoto}
             </button>
           </div>
         )}
