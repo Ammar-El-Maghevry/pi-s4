@@ -22,6 +22,7 @@ const POLL_INTERVAL_MS = 20_000;
 
 export function DashboardPage() {
   const { showError } = useToast();
+  const { t } = useLanguage();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [schedules, setSchedules] = useState<ScheduleWithExtras[]>([]);
   const [presentBySchedule, setPresentBySchedule] = useState<Record<number, number>>({});
