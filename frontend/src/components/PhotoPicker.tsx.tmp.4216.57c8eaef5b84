@@ -44,7 +44,7 @@ export function PhotoPicker({
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
       })
-      .catch((err) => setCameraError(err.message ?? "Could not access the camera"));
+      .catch((err) => setCameraError(err.message ?? t.photoPicker.cameraAccessError));
     return () => {
       cancelled = true;
       stopStream();

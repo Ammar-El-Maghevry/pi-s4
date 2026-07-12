@@ -17,6 +17,7 @@ export function PhotoPicker({
   // PhotoPicker's own Retake sitting alone on its own row.
   hideRetakeButton?: boolean;
 }) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<Mode>("upload");
   const [preview, setPreview] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
