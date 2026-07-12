@@ -78,43 +78,43 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-text-muted">Live overview of today's attendance</p>
+        <h1 className="text-2xl font-semibold">{t.dashboard.title}</h1>
+        <p className="text-sm text-text-muted">{t.dashboard.subtitle}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Students enrolled" value={summary?.total_students ?? "—"} />
-        <StatCard label="Present now" value={summary?.present_today ?? "—"} accent="present" />
-        <StatCard label="Absent now" value={summary?.absent_today ?? "—"} accent="absent" />
-        <StatCard label="Active sessions" value={activeSessions} accent="accent" />
+        <StatCard label={t.dashboard.studentsEnrolled} value={summary?.total_students ?? "—"} />
+        <StatCard label={t.dashboard.presentNow} value={summary?.present_today ?? "—"} accent="present" />
+        <StatCard label={t.dashboard.absentNow} value={summary?.absent_today ?? "—"} accent="absent" />
+        <StatCard label={t.dashboard.activeSessions} value={activeSessions} accent="accent" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Teachers enrolled" value={teachers.length} />
-        <StatCard label="Teachers present" value={teachersPresent} accent="present" />
-        <StatCard label="Teachers absent" value={teachersAbsent} accent="absent" />
+        <StatCard label={t.dashboard.teachersEnrolled} value={teachers.length} />
+        <StatCard label={t.dashboard.teachersPresent} value={teachersPresent} accent="present" />
+        <StatCard label={t.dashboard.teachersAbsent} value={teachersAbsent} accent="absent" />
       </div>
 
       <div className="rounded-xl border border-border bg-bg-elevated">
         <div className="border-b border-border px-5 py-3">
-          <h2 className="text-base font-semibold">Today's sessions</h2>
+          <h2 className="text-base font-semibold">{t.dashboard.todaysSessions}</h2>
         </div>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
-              <th className="px-5 py-3 font-medium">Session</th>
-              <th className="px-5 py-3 font-medium">Class</th>
-              <th className="px-5 py-3 font-medium">Time</th>
-              <th className="px-5 py-3 font-medium">Room</th>
-              <th className="px-5 py-3 font-medium">Present / Total</th>
-              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">{t.dashboard.colSession}</th>
+              <th className="px-5 py-3 font-medium">{t.dashboard.colClass}</th>
+              <th className="px-5 py-3 font-medium">{t.dashboard.colTime}</th>
+              <th className="px-5 py-3 font-medium">{t.dashboard.colRoom}</th>
+              <th className="px-5 py-3 font-medium">{t.dashboard.colPresentTotal}</th>
+              <th className="px-5 py-3 font-medium">{t.dashboard.colStatus}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <TableLoading colSpan={6} />
             ) : schedules.length === 0 ? (
-              <TableEmpty colSpan={6} message="No sessions scheduled." />
+              <TableEmpty colSpan={6} message={t.dashboard.noSessionsScheduled} />
             ) : (
               schedules.map((session) => {
                 // Roster scoped to the session's assigned class, if any — an
@@ -128,7 +128,7 @@ export function DashboardPage() {
                 return (
                   <tr key={session.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3 font-medium">{session.name}</td>
-                    <td className="px-5 py-3 text-text-muted">{session.class_name ?? "Unassigned"}</td>
+                    <td className="px-5 py-3 text-text-muted">{session.class_name ?? t.common.unassigned}</td>
                     <td className="px-5 py-3 font-data text-text-muted">
                       {formatTime(session.start_time)}–{formatTime(session.end_time)}
                     </td>
