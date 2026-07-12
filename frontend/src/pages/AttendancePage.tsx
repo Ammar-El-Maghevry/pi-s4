@@ -5,6 +5,7 @@ import { listStudents } from "../api/students";
 import { listTeacherAttendance, listTeachers } from "../api/teachers";
 import { StatusPill } from "../components/StatusPill";
 import { TableEmpty, TableLoading } from "../components/TableStates";
+import { useLanguage } from "../context/LanguageContext";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { formatTimeOnly, todayIso } from "../lib/time";
@@ -23,6 +24,7 @@ const CHIPS: FilterChip[] = ["ALL", AttendanceStatus.PRESENT, AttendanceStatus.L
 
 export function AttendancePage() {
   const { showError } = useToast();
+  const { t } = useLanguage();
   const [results, setResults] = useState<AttendanceResult[]>([]);
   const [students, setStudents] = useState<Record<number, Student>>({});
   const [schedules, setSchedules] = useState<Record<number, ScheduleWithExtras>>({});
@@ -67,11 +69,18 @@ export function AttendancePage() {
     [results, filter],
   );
 
+  function chipLabel(chip: FilterChip): string {
+    if (chip === "ALL") return t.attendance.chipAll;
+    if (chip === AttendanceStatus.PRESENT) return t.statusPill.present;
+    if (chip === AttendanceStatus.LATE) return t.statusPill.late;
+    return t.statusPill.absent;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Attendance</h1>
-        <p className="text-sm text-text-muted">Computed attendance results across all sessions</p>
+        <h1 className="text-2xl font-semibold">{t.attendance.title}</h1>
+        <p className="text-sm text-text-muted">{t.attendance.subtitle}</p>
       </div>
 
       <div className="flex gap-1 rounded-lg border border-border bg-bg-elevated p-1 w-fit">
@@ -83,24 +92,24 @@ export function AttendancePage() {
               filter === chip ? "bg-accent-soft text-accent" : "text-text-muted hover:text-text"
             }`}
           >
-            {chip}
+            {chipLabel(chip)}
           </button>
         ))}
       </div>
 
       <div className="rounded-xl border border-border bg-bg-elevated">
         <div className="border-b border-border px-5 py-3">
-          <h2 className="text-base font-semibold">Students</h2>
+          <h2 className="text-base font-semibold">{t.attendance.studentsSectionTitle}</h2>
         </div>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
-              <th className="px-5 py-3 font-medium">Student</th>
-              <th className="px-5 py-3 font-medium">Class</th>
-              <th className="px-5 py-3 font-medium">Date</th>
-              <th className="px-5 py-3 font-medium">Entry</th>
-              <th className="px-5 py-3 font-medium">Exit</th>
-              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colStudent}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colClass}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colDate}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colEntry}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colExit}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colStatus}</th>
             </tr>
           </thead>
           <tbody>
@@ -136,15 +145,15 @@ export function AttendancePage() {
 
       <div className="rounded-xl border border-border bg-bg-elevated">
         <div className="border-b border-border px-5 py-3">
-          <h2 className="text-base font-semibold">Teachers — today</h2>
+          <h2 className="text-base font-semibold">{t.attendance.teachersSectionTitle}</h2>
         </div>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
-              <th className="px-5 py-3 font-medium">Teacher</th>
-              <th className="px-5 py-3 font-medium">Status</th>
-              <th className="px-5 py-3 font-medium">Marked by</th>
-              <th className="px-5 py-3 font-medium">Marked at</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colTeacher}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colStatus}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colMarkedBy}</th>
+              <th className="px-5 py-3 font-medium">{t.attendance.colMarkedAt}</th>
             </tr>
           </thead>
           <tbody>
@@ -153,11 +162,11 @@ export function AttendancePage() {
             ) : teachers.length === 0 ? (
               <TableEmpty colSpan={4} />
             ) : (
-              teachers.map((t) => {
-                const record = teacherAttendanceByTeacher[t.id];
+              teachers.map((teacher) => {
+                const record = teacherAttendanceByTeacher[teacher.id];
                 return (
-                  <tr key={t.id} className="border-b border-border last:border-0">
-                    <td className="px-5 py-3 font-medium">{t.full_name}</td>
+                  <tr key={teacher.id} className="border-b border-border last:border-0">
+                    <td className="px-5 py-3 font-medium">{teacher.full_name}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-data ${
@@ -166,11 +175,15 @@ export function AttendancePage() {
                             : "border-absent/30 bg-absent/10 text-absent"
                         }`}
                       >
-                        {record?.is_present ? "PRESENT" : "ABSENT"}
+                        {record?.is_present ? t.attendance.statusPresent : t.attendance.statusAbsent}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-text-muted">
-                      {record ? (record.source === "camera" ? "Camera" : "Manual") : "—"}
+                      {record
+                        ? record.source === "camera"
+                          ? t.attendance.markedByCamera
+                          : t.attendance.markedByManual
+                        : "—"}
                     </td>
                     <td className="px-5 py-3 font-data text-text-muted">
                       {formatTimeOnly(record?.marked_at ?? null)}

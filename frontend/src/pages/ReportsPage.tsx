@@ -5,6 +5,7 @@ import { listTeachers } from "../api/teachers";
 import { StatusPill } from "../components/StatusPill";
 import { TableEmpty, TableLoading } from "../components/TableStates";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 import { useToast } from "../context/ToastContext";
 import { apiErrorMessage } from "../lib/api";
 import { formatTimeOnly } from "../lib/time";
@@ -23,6 +24,7 @@ type Person = {
 export function ReportsPage() {
   const { user } = useAuth();
   const { showError } = useToast();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [results, setResults] = useState<AttendanceResult[]>([]);
@@ -111,9 +113,9 @@ export function ReportsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Reports</h1>
+        <h1 className="text-2xl font-semibold">{t.reports.title}</h1>
         <p className="text-sm text-text-muted">
-          {isSelfView ? "Your attendance history" : "Directory and attendance history"}
+          {isSelfView ? t.reports.subtitleSelf : t.reports.subtitleAdmin}
         </p>
       </div>
 
@@ -124,15 +126,15 @@ export function ReportsPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search people…"
+                placeholder={t.reports.searchPlaceholder}
                 className="w-full rounded-lg border border-border bg-bg-inset px-3 py-2 text-sm outline-none focus:border-accent"
               />
             </div>
             <div className="max-h-[32rem] overflow-y-auto">
               {isLoading ? (
-                <p className="p-4 text-sm text-text-muted">Loading…</p>
+                <p className="p-4 text-sm text-text-muted">{t.common.loading}</p>
               ) : visibleDirectory.length === 0 ? (
-                <p className="p-4 text-sm text-text-muted">No matches.</p>
+                <p className="p-4 text-sm text-text-muted">{t.reports.noMatches}</p>
               ) : (
                 visibleDirectory.map((p) => (
                   <button
@@ -144,7 +146,7 @@ export function ReportsPage() {
                   >
                     <span className="text-sm font-medium">{p.full_name}</span>
                     <span className="font-data text-xs text-text-muted">
-                      {p.identifier} · {p.kind}
+                      {p.identifier} · {p.kind === "student" ? t.reports.kindStudent : t.reports.kindTeacher}
                     </span>
                   </button>
                 ))
@@ -156,7 +158,7 @@ export function ReportsPage() {
         <div className="flex-1">
           {!selected ? (
             <div className="rounded-xl border border-border bg-bg-elevated p-10 text-center text-sm text-text-muted">
-              Select a person to view their report.
+              {t.reports.selectPersonPrompt}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -165,7 +167,9 @@ export function ReportsPage() {
                   <div>
                     <h2 className="text-lg font-semibold">{selected.full_name}</h2>
                     <p className="font-data text-sm text-text-muted">
-                      {selected.identifier} · {selected.kind} · {selected.department ?? "—"}
+                      {selected.identifier} ·{" "}
+                      {selected.kind === "student" ? t.reports.kindStudent : t.reports.kindTeacher} ·{" "}
+                      {selected.department ?? "—"}
                     </p>
                   </div>
                 </div>
@@ -174,17 +178,17 @@ export function ReportsPage() {
                     <div className="font-data text-xl font-semibold text-present">
                       {counts.present}
                     </div>
-                    <div className="text-xs text-text-muted">Present</div>
+                    <div className="text-xs text-text-muted">{t.statusPill.present}</div>
                   </div>
                   <div className="rounded-lg border border-late/30 bg-late/10 p-3 text-center">
                     <div className="font-data text-xl font-semibold text-late">{counts.late}</div>
-                    <div className="text-xs text-text-muted">Late</div>
+                    <div className="text-xs text-text-muted">{t.statusPill.late}</div>
                   </div>
                   <div className="rounded-lg border border-absent/30 bg-absent/10 p-3 text-center">
                     <div className="font-data text-xl font-semibold text-absent">
                       {counts.absent}
                     </div>
-                    <div className="text-xs text-text-muted">Absent</div>
+                    <div className="text-xs text-text-muted">{t.statusPill.absent}</div>
                   </div>
                 </div>
               </div>
@@ -193,17 +197,17 @@ export function ReportsPage() {
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-border text-xs uppercase tracking-wider text-text-muted">
-                      <th className="px-5 py-3 font-medium">Date</th>
-                      <th className="px-5 py-3 font-medium">Entry</th>
-                      <th className="px-5 py-3 font-medium">Exit</th>
-                      <th className="px-5 py-3 font-medium">Status</th>
+                      <th className="px-5 py-3 font-medium">{t.attendance.colDate}</th>
+                      <th className="px-5 py-3 font-medium">{t.attendance.colEntry}</th>
+                      <th className="px-5 py-3 font-medium">{t.attendance.colExit}</th>
+                      <th className="px-5 py-3 font-medium">{t.attendance.colStatus}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading ? (
                       <TableLoading colSpan={4} />
                     ) : selected.kind === "teacher" ? (
-                      <TableEmpty colSpan={4} message="Attendance tracking applies to students only." />
+                      <TableEmpty colSpan={4} message={t.reports.teacherTrackingNote} />
                     ) : personResults.length === 0 ? (
                       <TableEmpty colSpan={4} />
                     ) : (
