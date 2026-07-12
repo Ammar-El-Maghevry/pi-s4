@@ -64,6 +64,44 @@ def create_student(data: StudentCreate, db: Session = Depends(get_db)):
     return _to_read(student)
 
 
+@router.post("/import", response_model=StudentImportResult)
+async def import_students_route(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Importe des etudiants en masse depuis un fichier CSV/XLSX (colonnes
+    "full_name"/"student_id"/"email"/"department"), ou une archive ZIP
+    contenant ce manifest accompagne de photos nommees "<matricule>.jpg" etc.
+
+    Les etudiants sans photo correspondante dans le fichier sont recenses
+    dans `missing_photo_students` pour que l'administrateur puisse leur en
+    ajouter une depuis la page People (clic sur l'avatar).
+    """
+    filename = file.filename or ""
+    if not filename.lower().endswith((".csv", ".xlsx", ".zip")):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Format non supporte : utilisez un fichier .csv, .xlsx ou .zip",
+        )
+    content = await file.read()
+    try:
+        result = await run_in_threadpool(import_students, db, content, filename)
+    except StudentImportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return StudentImportResult(
+        total_rows=result.total_rows,
+        created=result.created,
+        duplicates=result.duplicates,
+        invalid=result.invalid,
+        missing_photo=result.missing_photo,
+        photo_failed=result.photo_failed,
+        missing_photo_students=[
+            StudentImportMissingPhoto(id=s.id, full_name=s.full_name, student_id=s.student_id)
+            for s in result.missing_photo_students
+        ],
+        errors=[StudentImportRowError(row=e.row, reason=e.reason) for e in result.errors],
+    )
+
+
 @router.get("/{student_pk}", response_model=StudentRead)
 def get_student(student_pk: int, db: Session = Depends(get_db)):
     """Récupère un étudiant par son identifiant interne."""
