@@ -509,11 +509,8 @@ export const fr: Translations = {
     fieldPairingEmail: "E-mail d'appairage (facultatif)",
     activeCheckbox: "Active",
     phoneSavedTitle: "Caméra téléphone enregistrée",
-    phoneSavedHint: (vars) => [
-      "Ouvrez ce lien dans le navigateur du téléphone pour démarrer la diffusion de sa caméra sous le nom ",
-      vars.name,
-      ".",
-    ],
+    phoneSavedHintPrefix: "Ouvrez ce lien dans le navigateur du téléphone pour démarrer la diffusion de sa caméra sous le nom ",
+    phoneSavedHintSuffix: ".",
     copyBtn: "Copier",
     emailThisLink: (vars) => `Envoyer ce lien par e-mail à ${vars.email}`,
     certWarning:

@@ -306,9 +306,9 @@ function CameraModal({
       <Modal title={t.cameras.phoneSavedTitle} onClose={onSaved}>
         <div className="flex flex-col gap-3">
           <p className="text-sm text-text-muted">
-            {t.cameras.phoneSavedHint({ name: savedCamera.name })[0]}
+            {t.cameras.phoneSavedHintPrefix}
             <span className="font-medium text-text">{savedCamera.name}</span>
-            {t.cameras.phoneSavedHint({ name: savedCamera.name })[2]}
+            {t.cameras.phoneSavedHintSuffix}
           </p>
           <div className="flex items-center gap-2 rounded-lg border border-border bg-bg-inset px-3 py-2 text-xs font-data">
             <span className="flex-1 truncate">{savedCamera.pairing_link}</span>
